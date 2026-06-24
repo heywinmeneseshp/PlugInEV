@@ -1,9 +1,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, Image, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapScreen from '../screens/MapScreen';
+
+const LOGO_U = require('../../assets/logo_u.png');
 import ReservationsScreen from '../screens/ReservationsScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -22,6 +24,13 @@ function TabIcon({ routeName, focused }) {
   const icons = TAB_ICONS[routeName] ?? { active: 'ellipse', inactive: 'ellipse-outline' };
 
   if (focused) {
+    if (routeName === 'Mapa') {
+      return (
+        <View style={styles.isotipoWrap}>
+          <Image source={LOGO_U} style={styles.isotipoImg} resizeMode="contain" />
+        </View>
+      );
+    }
     return (
       <LinearGradient
         colors={['#00BAFF', '#00FF8C']}
@@ -89,5 +98,15 @@ const styles = StyleSheet.create({
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  isotipoWrap: {
+    width: 44,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  isotipoImg: {
+    width: 26,
+    height: 26,
   },
 });
