@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   avatarText: { fontSize: 20, fontWeight: weights.bold, color: colors.green },
-  profileInfo: { flex: 1 },
+  profileInfo: { flex: 1, alignItems: 'center' },
   userName: { fontSize: 15, fontWeight: weights.bold, color: colors.textPrimary, marginBottom: 3 },
   verifiedBadge: {
     flexDirection: 'row', alignItems: 'center',
