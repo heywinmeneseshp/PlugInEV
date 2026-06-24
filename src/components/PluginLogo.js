@@ -1,105 +1,115 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import Svg, { Defs, LinearGradient, Stop, Text, Path, Rect, G } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
+
+const SW = 6.5; // stroke width uniforme
+const CAP = { r: 'round' }; // shorthand
 
 /**
- * Plugin logo variants:
- *  - "wordmark"  → "plugin" completo con gradiente (default)
- *  - "isotipo"   → solo el símbolo del enchufe (la ü)
- *  - "mono"      → wordmark en blanco
+ * PluginLogo — wordmark SVG trazado a mano replicando el logo oficial.
+ *
+ * variant: 'wordmark' | 'isotipo' | 'mono'
+ * size: multiplicador (1 = tamaño base)
  */
 export default function PluginLogo({ variant = 'wordmark', size = 1 }) {
   if (variant === 'isotipo') return <Isotipo size={size} />;
-  if (variant === 'mono')    return <Wordmark size={size} mono />;
-  return <Wordmark size={size} />;
+  return <Wordmark size={size} mono={variant === 'mono'} />;
 }
 
-/* ─── Isotipo: enchufe en U con gradiente ─── */
-function Isotipo({ size = 1 }) {
-  const W = 56 * size;
-  const H = 64 * size;
+/* ─── Wordmark ─────────────────────────────────────────────────── */
+function Wordmark({ size = 1, mono = false }) {
+  const W = 244 * size;
+  const H = 90 * size;
+  // gradientUnits userSpaceOnUse → gradiente continuo en coordenadas absolutas
+  const stroke = mono ? 'white' : 'url(#wg)';
+
   return (
-    <Svg width={W} height={H} viewBox="0 0 56 64">
+    <Svg width={W} height={H} viewBox="0 0 244 90">
       <Defs>
-        <LinearGradient id="ig" x1="0" y1="0" x2="1" y2="0">
+        <LinearGradient id="wg" x1="0" y1="0" x2="244" y2="0" gradientUnits="userSpaceOnUse">
           <Stop offset="0"   stopColor="#00BAFF" />
           <Stop offset="1"   stopColor="#00FF8C" />
         </LinearGradient>
       </Defs>
-      {/* Pín izquierdo */}
-      <Rect x="10" y="0" width="8" height="22" rx="4" fill="url(#ig)" />
-      {/* Pín derecho */}
-      <Rect x="38" y="0" width="8" height="22" rx="4" fill="url(#ig)" />
-      {/* Arco U */}
+
+      {/* ── p ──────────────────────────────────────────────────────
+          Stem vertical (con descender) + arco D cerrado a la derecha */}
       <Path
-        d="M10 18 Q10 58 28 58 Q46 58 46 18"
-        fill="none"
-        stroke="url(#ig)"
-        strokeWidth="8"
-        strokeLinecap="round"
+        d="M14,16 L14,82"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none"
+      />
+      <Path
+        d="M14,19 C14,5 58,5 58,42 C58,68 14,68 14,55"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none"
+      />
+
+      {/* ── l ──────────────────────────────────────────────────────
+          Trazo vertical simple */}
+      <Path
+        d="M70,16 L70,70"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none"
+      />
+
+      {/* ── plug (ü) ───────────────────────────────────────────────
+          Dos pines rectangulares arriba + U abierta que baja hasta y=82 */}
+      <Path d="M83,2 L83,21"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none" />
+      <Path d="M105,2 L105,21"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none" />
+      <Path
+        d="M83,21 L83,56 Q83,82 94,82 Q105,82 105,56 L105,21"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" strokeLinejoin="round" fill="none"
+      />
+
+      {/* ── g ──────────────────────────────────────────────────────
+          Círculo abierto a las 3:00 (≈y=42) + cola descendente con gancho */}
+      <Path
+        d="M161,42 C161,8 117,8 117,42 C117,70 161,70 161,50 L161,64 C161,80 128,84 116,76"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none"
+      />
+
+      {/* ── i ──────────────────────────────────────────────────────
+          Punto (pequeño trazo redondeado) + fuste */}
+      <Path d="M173,8 L173,16"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none" />
+      <Path d="M173,24 L173,70"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none" />
+
+      {/* ── n ──────────────────────────────────────────────────────
+          Fuste izquierdo + arco + fuste derecho */}
+      <Path d="M186,24 L186,70"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none" />
+      <Path
+        d="M186,36 C186,16 228,16 228,40 L228,70"
+        stroke={stroke} strokeWidth={SW} strokeLinecap="round" fill="none"
       />
     </Svg>
   );
 }
 
-/* ─── Wordmark: "plugin" con gradiente y el isotipo como ü ─── */
-function Wordmark({ size = 1, mono = false }) {
-  // Dimensiones base del wordmark completo
-  const W = 260 * size;
-  const H = 72 * size;
-
-  const fill = mono ? 'white' : 'url(#grad)';
+/* ─── Isotipo ──────────────────────────────────────────────────── */
+function Isotipo({ size = 1 }) {
+  const W = 52 * size;
+  const H = 68 * size;
 
   return (
-    <Svg width={W} height={H} viewBox="0 0 260 72">
+    <Svg width={W} height={H} viewBox="0 0 52 68">
       <Defs>
-        <LinearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+        <LinearGradient id="ig" x1="0" y1="0" x2="52" y2="0" gradientUnits="userSpaceOnUse">
           <Stop offset="0"   stopColor="#00BAFF" />
           <Stop offset="1"   stopColor="#00FF8C" />
         </LinearGradient>
       </Defs>
-
-      {/* "pl" */}
-      <Text
-        x="0"
-        y="58"
-        fontSize="68"
-        fontWeight="700"
-        letterSpacing="-2"
-        fill={fill}
-        fontFamily="System"
-      >
-        pl
-      </Text>
-
-      {/* Isotipo (enchufe) como "ü" — centrado entre pl y gin */}
-      <G transform="translate(90, 4) scale(0.72)">
-        {/* Pín izquierdo */}
-        <Rect x="4"  y="0" width="7" height="18" rx="3.5" fill={mono ? 'white' : 'url(#grad)'} />
-        {/* Pín derecho */}
-        <Rect x="33" y="0" width="7" height="18" rx="3.5" fill={mono ? 'white' : 'url(#grad)'} />
-        {/* Arco U */}
-        <Path
-          d="M4 14 Q4 50 22 50 Q40 50 40 14"
-          fill="none"
-          stroke={mono ? 'white' : 'url(#grad)'}
-          strokeWidth="7"
-          strokeLinecap="round"
-        />
-      </G>
-
-      {/* "gin" */}
-      <Text
-        x="138"
-        y="58"
-        fontSize="68"
-        fontWeight="700"
-        letterSpacing="-2"
-        fill={fill}
-        fontFamily="System"
-      >
-        gin
-      </Text>
+      {/* Pín izquierdo */}
+      <Path d="M14,2 L14,20"
+        stroke="url(#ig)" strokeWidth={6} strokeLinecap="round" fill="none" />
+      {/* Pín derecho */}
+      <Path d="M38,2 L38,20"
+        stroke="url(#ig)" strokeWidth={6} strokeLinecap="round" fill="none" />
+      {/* U */}
+      <Path
+        d="M14,20 L14,44 Q14,66 26,66 Q38,66 38,44 L38,20"
+        stroke="url(#ig)" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" fill="none"
+      />
     </Svg>
   );
 }
