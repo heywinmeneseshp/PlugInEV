@@ -196,7 +196,7 @@ export default function MapScreen() {
 
       {/* Location FAB */}
       {!sheetVisible && (
-        <View style={[styles.locationWrapper, { bottom: insets.bottom + 24 }]}>
+        <View style={[styles.locationWrapper, { bottom: 20 }]}>
           <LocationButton onPress={() => mapRef.current?.animateToRegion(INITIAL_REGION, 800)} />
         </View>
       )}
