@@ -1,14 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Animated,
-  Dimensions,
-  TouchableWithoutFeedback,
-  Switch,
+  View, Text, Image, StyleSheet, TouchableOpacity,
+  Animated, Dimensions, TouchableWithoutFeedback, Switch,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -18,18 +13,17 @@ import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = width * 0.78;
+const LOGO_U = require('../../assets/logo_u.png');
 
+/* Solo items que NO están en el tab bar */
 const MENU_ITEMS = [
-  { icon: 'map-outline',          label: 'Inicio',               screen: 'Mapa' },
-  { icon: 'calendar-outline',     label: 'Mis Reservas',         screen: 'Reservas' },
-  { icon: 'time-outline',         label: 'Historial de Sesiones',screen: 'Reservas' },
-  { icon: 'wallet-outline',       label: 'Wallet & Pagos',       screen: 'Cartera' },
-  { icon: 'headset-outline',      label: 'Soporte Técnico',      screen: null },
-  { icon: 'help-circle-outline',  label: 'Ayuda y Preguntas',    screen: null },
+  { icon: 'headset-outline',     label: 'Soporte Técnico',  screen: null },
+  { icon: 'help-circle-outline', label: 'Ayuda & FAQ',      screen: null },
+  { icon: 'shield-outline',      label: 'Privacidad',       screen: null },
 ];
 
 export default function Sidebar({ visible, onClose }) {
-  const insets = useSafeAreaInsets();
+  const insets    = useSafeAreaInsets();
   const navigation = useNavigation();
   const { user, logout } = useAuth();
   const slideAnim   = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -37,20 +31,16 @@ export default function Sidebar({ visible, onClose }) {
   const [hostMode, setHostMode] = React.useState(false);
 
   useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
-        Animated.timing(overlayAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim,   { toValue: -DRAWER_WIDTH, duration: 220, useNativeDriver: true }),
-        Animated.timing(overlayAnim, { toValue: 0,             duration: 220, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [visible, slideAnim, overlayAnim]);
-
-  if (!visible && slideAnim._value === -DRAWER_WIDTH) return null;
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: visible ? 0 : -DRAWER_WIDTH,
+        useNativeDriver: true, damping: 22, stiffness: 220,
+      }),
+      Animated.timing(overlayAnim, {
+        toValue: visible ? 1 : 0, duration: 220, useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible]);
 
   const handleNav = (screen) => {
     onClose();
@@ -58,71 +48,115 @@ export default function Sidebar({ visible, onClose }) {
   };
 
   return (
-    <View style={[StyleSheet.absoluteFill, { zIndex: 100, elevation: 100 }]} pointerEvents={visible ? 'auto' : 'none'}>
+    <View
+      style={[StyleSheet.absoluteFill, { zIndex: 100, elevation: 100 }]}
+      pointerEvents={visible ? 'auto' : 'none'}
+    >
       <TouchableWithoutFeedback onPress={onClose}>
         <Animated.View style={[styles.overlay, { opacity: overlayAnim }]} />
       </TouchableWithoutFeedback>
 
-      <Animated.View
-        style={[styles.drawer, { transform: [{ translateX: slideAnim }], paddingTop: insets.top + 16 }]}
-      >
-        {/* User info */}
-        <View style={styles.userSection}>
+      <Animated.View style={[
+        styles.drawer,
+        { transform: [{ translateX: slideAnim }], paddingTop: insets.top + 20 },
+      ]}>
+
+        {/* ── Logo ── */}
+        <View style={styles.logoRow}>
           <PluginLogo variant="wordmark" size={0.38} />
-          <View style={[styles.avatarRing, { marginTop: 16 }]}>
+        </View>
+
+        {/* ── Perfil ── */}
+        <View style={styles.profileCard}>
+          {/* Avatar con halo gradiente */}
+          <LinearGradient
+            colors={['#00BAFF', '#00FF8C']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={styles.avatarRing}
+          >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{user?.nombre?.charAt(0) || 'U'}</Text>
+              <Text style={styles.avatarText}>{user?.nombre?.charAt(0)?.toUpperCase() || 'U'}</Text>
+            </View>
+          </LinearGradient>
+
+          <View style={styles.profileInfo}>
+            <Text style={styles.userName}>{user?.nombre || 'Usuario'}</Text>
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={11} color={colors.green} />
+              <Text style={styles.verifiedText}> Verificado</Text>
+            </View>
+            <Text style={styles.userEmail}>{user?.email}</Text>
+          </View>
+        </View>
+
+        {/* ── Modo Anfitrión ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>CONFIGURACIÓN</Text>
+
+          <View style={styles.glassCard}>
+            <View style={styles.toggleRow}>
+              <LinearGradient
+                colors={['rgba(0,186,255,0.2)', 'rgba(0,255,140,0.2)']}
+                style={styles.iconPill}
+              >
+                <Image source={LOGO_U} style={styles.isotipoSmall} resizeMode="contain" />
+              </LinearGradient>
+              <Text style={styles.toggleLabel}>Modo Anfitrión</Text>
+              <Switch
+                value={hostMode}
+                onValueChange={setHostMode}
+                trackColor={{ false: colors.trackBg, true: 'rgba(0,186,255,0.4)' }}
+                thumbColor={hostMode ? colors.cyan : colors.textMuted}
+                ios_backgroundColor={colors.trackBg}
+                style={{ marginLeft: 'auto' }}
+              />
             </View>
           </View>
-          <Text style={styles.userName}>{user?.nombre || 'Usuario'}</Text>
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={12} color={colors.green} />
-            <Text style={styles.verifiedText}> Verificado</Text>
-          </View>
-          <Text style={styles.userEmail}>{user?.email}</Text>
-        </View>
 
-        {/* Host mode toggle */}
-        <View style={styles.hostToggle}>
-          <Ionicons name="home-outline" size={16} color={colors.textSecondary} />
-          <Text style={styles.hostToggleLabel}>Modo Anfitrión</Text>
-          <Switch
-            value={hostMode}
-            onValueChange={setHostMode}
-            trackColor={{ false: colors.trackBg, true: colors.cyanDim }}
-            thumbColor={hostMode ? colors.cyan : colors.textMuted}
-            ios_backgroundColor={colors.trackBg}
-            style={{ marginLeft: 'auto' }}
-          />
-        </View>
-
-        {/* Connector picker */}
-        <View style={styles.connectorSection}>
-          <Text style={styles.connectorLabel}>Tipo de conector</Text>
-          <View style={styles.connectorPicker}>
-            <Ionicons name="flash-outline" size={14} color={colors.cyan} />
-            <Text style={styles.connectorValue}>  Tipo 2 (Mennekes)</Text>
-            <Ionicons name="chevron-down-outline" size={14} color={colors.textSecondary} style={{ marginLeft: 'auto' }} />
+          {/* Tipo de conector */}
+          <View style={[styles.glassCard, { marginTop: 8 }]}>
+            <View style={styles.toggleRow}>
+              <View style={styles.iconPillDim}>
+                <Ionicons name="flash-outline" size={14} color={colors.cyan} />
+              </View>
+              <View>
+                <Text style={styles.connectorMeta}>Tipo de conector</Text>
+                <Text style={styles.connectorValue}>Tipo 2 — Mennekes</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+            </View>
           </View>
         </View>
 
-        {/* Menu items */}
-        <View style={styles.menuList}>
-          {MENU_ITEMS.map((item, i) => (
-            <TouchableOpacity key={i} style={styles.menuItem} onPress={() => handleNav(item.screen)} activeOpacity={0.7}>
-              <Ionicons name={item.icon} size={20} color={colors.textSecondary} />
-              <Text style={styles.menuLabel}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* ── Menu items ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>AYUDA</Text>
+          <View style={styles.glassCard}>
+            {MENU_ITEMS.map((item, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[styles.menuRow, i < MENU_ITEMS.length - 1 && styles.menuDivider]}
+                onPress={() => handleNav(item.screen)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={item.icon} size={18} color={colors.textSecondary} />
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        {/* Logout */}
+        <View style={{ flex: 1 }} />
+
+        {/* ── Cerrar sesión ── */}
         <TouchableOpacity
-          style={[styles.menuItem, styles.logoutItem, { marginBottom: insets.bottom + 16 }]}
+          style={[styles.logoutBtn, { marginBottom: insets.bottom + 20 }]}
           onPress={() => { onClose(); setTimeout(logout, 300); }}
+          activeOpacity={0.8}
         >
-          <Ionicons name="log-out-outline" size={20} color={colors.red} />
-          <Text style={[styles.menuLabel, styles.logoutLabel]}>Cerrar Sesión</Text>
+          <Ionicons name="log-out-outline" size={18} color={colors.red} />
+          <Text style={styles.logoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -132,79 +166,111 @@ export default function Sidebar({ visible, onClose }) {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
   },
   drawer: {
     position: 'absolute',
     top: 0, bottom: 0, left: 0,
     width: DRAWER_WIDTH,
-    backgroundColor: '#0A1525',
+    backgroundColor: '#070E1C',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 20,
+    borderRightColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: 18,
   },
-  userSection: {
-    alignItems: 'flex-start',
+
+  /* Logo */
+  logoRow: {
     marginBottom: 24,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+
+  /* Profile card */
+  profileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    borderRadius: radius.xl,
+    padding: 14,
+    marginBottom: 20,
   },
   avatarRing: {
-    width: 58, height: 58, borderRadius: 29,
-    borderWidth: 2, borderColor: colors.green,
+    width: 52, height: 52, borderRadius: 26,
+    padding: 2,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
   },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: colors.greenDim,
+    backgroundColor: '#0D1A2D',
     alignItems: 'center', justifyContent: 'center',
   },
   avatarText: { fontSize: 20, fontWeight: weights.bold, color: colors.green },
-  userName:   { fontSize: 17, fontWeight: weights.bold, color: colors.textPrimary, marginBottom: 4 },
+  profileInfo: { flex: 1 },
+  userName: { fontSize: 15, fontWeight: weights.bold, color: colors.textPrimary, marginBottom: 3 },
   verifiedBadge: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.greenDim,
+    backgroundColor: 'rgba(0,255,140,0.12)',
     borderRadius: radius.full,
-    paddingHorizontal: 10, paddingVertical: 3,
-    marginBottom: 6,
-    borderWidth: 1, borderColor: colors.green,
+    paddingHorizontal: 8, paddingVertical: 2,
+    alignSelf: 'flex-start',
+    borderWidth: 1, borderColor: 'rgba(0,255,140,0.3)',
+    marginBottom: 3,
   },
-  verifiedText: { fontSize: 11, color: colors.green, fontWeight: weights.semibold },
-  userEmail:   { fontSize: 12, color: colors.textMuted },
+  verifiedText: { fontSize: 10, color: colors.green, fontWeight: weights.semibold },
+  userEmail: { fontSize: 11, color: colors.textMuted },
 
-  hostToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+  /* Sections */
+  section: { marginBottom: 16 },
+  sectionLabel: {
+    fontSize: 10, color: colors.textMuted, fontWeight: weights.semibold,
+    letterSpacing: 1, marginBottom: 8, marginLeft: 4,
+  },
+
+  /* Glass card */
+  glassCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: radius.lg, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 14, paddingVertical: 12,
-    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    borderRadius: radius.xl,
+    overflow: 'hidden',
   },
-  hostToggleLabel: { fontSize: 14, color: colors.textSecondary, fontWeight: weights.medium },
+  toggleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
+  },
+  iconPill: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconPillDim: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: 'rgba(0,186,255,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  isotipoSmall: { width: 18, height: 18 },
+  toggleLabel: { fontSize: 14, color: colors.textPrimary, fontWeight: weights.medium },
+  connectorMeta: { fontSize: 10, color: colors.textMuted },
+  connectorValue: { fontSize: 13, color: colors.textPrimary, fontWeight: weights.medium },
 
-  connectorSection: { marginBottom: 20 },
-  connectorLabel: {
-    fontSize: 11, color: colors.textMuted, fontWeight: weights.medium,
-    marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5,
+  /* Menu rows */
+  menuRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
   },
-  connectorPicker: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: radius.lg, borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 14, paddingVertical: 11,
+  menuDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  connectorValue: { fontSize: 14, color: colors.textPrimary },
+  menuLabel: { fontSize: 14, color: colors.textPrimary, fontWeight: weights.medium },
 
-  menuList: { flex: 1 },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+  /* Logout */
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: 'rgba(255,59,48,0.1)',
+    borderWidth: 1, borderColor: 'rgba(255,59,48,0.25)',
+    borderRadius: radius.xl,
+    paddingHorizontal: 16, paddingVertical: 13,
   },
-  menuLabel: { fontSize: 15, color: colors.textPrimary, fontWeight: weights.medium },
-  logoutItem: { borderBottomWidth: 0, marginTop: 8 },
-  logoutLabel: { color: colors.red },
+  logoutText: { fontSize: 14, color: colors.red, fontWeight: weights.semibold },
 });
