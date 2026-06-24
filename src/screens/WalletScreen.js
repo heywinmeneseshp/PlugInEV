@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   FlatList,
   Alert,
   StyleSheet,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
+import GradientButton from '../components/GradientButton';
+import { colors, weights, radius } from '../styles/theme';
 
 const TRANSACTIONS = [
   { id: '1', concept: 'Carga ElectroCarga Norte', amount: -2475, date: 'Hoy' },
@@ -18,6 +21,7 @@ const TRANSACTIONS = [
 ];
 
 export default function WalletScreen() {
+  const insets = useSafeAreaInsets();
   const { updateWallet } = useAuth();
   const [balance, setBalance] = useState(25000);
 
@@ -29,147 +33,104 @@ export default function WalletScreen() {
   };
 
   const renderTransaction = ({ item }) => (
-    <View style={styles.transactionRow}>
-      <View style={styles.transactionLeft}>
-        <Text style={styles.transactionConcept}>{item.concept}</Text>
-        <Text style={styles.transactionDate}>{item.date}</Text>
+    <View style={s.txRow}>
+      <View style={[s.txIcon, { backgroundColor: item.amount > 0 ? colors.greenDim : colors.redDim }]}>
+        <Ionicons
+          name={item.amount > 0 ? 'arrow-down-outline' : 'flash-outline'}
+          size={16}
+          color={item.amount > 0 ? colors.green : colors.red}
+        />
       </View>
-      <Text
-        style={[
-          styles.transactionAmount,
-          { color: item.amount > 0 ? '#22C55E' : '#EF4444' },
-        ]}
-      >
-        {item.amount > 0 ? '+' : ''}
-        {formatCOP(Math.abs(item.amount))}
+      <View style={s.txInfo}>
+        <Text style={s.txConcept}>{item.concept}</Text>
+        <Text style={s.txDate}>{item.date}</Text>
+      </View>
+      <Text style={[s.txAmount, { color: item.amount > 0 ? colors.green : colors.red }]}>
+        {item.amount > 0 ? '+' : ''}{formatCOP(Math.abs(item.amount))}
       </Text>
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Cartera</Text>
+    <View style={[s.container, { paddingTop: insets.top }]}>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Cartera</Text>
       </View>
 
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Saldo disponible</Text>
-        <Text style={styles.balanceAmount}>{formatCOP(balance)}</Text>
+      {/* Balance card */}
+      <View style={s.balanceCard}>
+        <Ionicons name="wallet-outline" size={20} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+        <Text style={s.balanceLabel}>Saldo disponible</Text>
+        <Text style={s.balanceAmount}>{formatCOP(balance)}</Text>
       </View>
 
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.depositButton} onPress={handleDeposit}>
-          <Text style={styles.depositButtonText}>Recargar</Text>
-        </TouchableOpacity>
+      {/* Recargar */}
+      <View style={s.actionRow}>
+        <GradientButton
+          label="Recargar +$10.000"
+          onPress={handleDeposit}
+          icon={<Ionicons name="add-circle-outline" size={18} color="#050A15" />}
+        />
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Movimientos recientes</Text>
-      </View>
+      <Text style={s.sectionTitle}>Movimientos recientes</Text>
 
       <FlatList
         data={TRANSACTIONS}
         keyExtractor={(item) => item.id}
         renderItem={renderTransaction}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={s.listContent}
         showsVerticalScrollIndicator={false}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0B0F1A',
-  },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: { paddingBottom: 16, paddingHorizontal: 20 },
+  headerTitle: { fontSize: 28, fontWeight: weights.extrabold, color: colors.textPrimary },
   balanceCard: {
     marginHorizontal: 20,
-    backgroundColor: '#111827',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radius['2xl'],
     padding: 24,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     marginBottom: 20,
   },
-  balanceLabel: {
-    fontSize: 14,
-    color: '#94A3B8',
-    marginBottom: 8,
-  },
-  balanceAmount: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 28,
-  },
-  depositButton: {
-    flex: 1,
-    backgroundColor: '#00E5FF',
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  depositButtonText: {
+  balanceLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: 6 },
+  balanceAmount: { fontSize: 40, fontWeight: weights.extrabold, color: colors.textPrimary },
+  actionRow: { marginHorizontal: 20, marginBottom: 28 },
+  sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0B0F1A',
-  },
-  sectionHeader: {
+    fontWeight: weights.bold,
+    color: colors.textPrimary,
     paddingHorizontal: 20,
     marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-  },
-  transactionRow: {
+  listContent: { paddingHorizontal: 20, paddingBottom: 24 },
+  txRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radius.lg,
+    padding: 14,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: 'rgba(255,255,255,0.08)',
+    gap: 12,
   },
-  transactionLeft: {
-    flex: 1,
-    marginRight: 12,
+  txIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  transactionConcept: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  txInfo: { flex: 1 },
+  txConcept: { fontSize: 14, fontWeight: weights.semibold, color: colors.textPrimary, marginBottom: 2 },
+  txDate: { fontSize: 12, color: colors.textMuted },
+  txAmount: { fontSize: 15, fontWeight: weights.bold },
 });

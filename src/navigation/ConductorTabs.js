@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import MapScreen from '../screens/MapScreen';
 import ReservationsScreen from '../screens/ReservationsScreen';
 import WalletScreen from '../screens/WalletScreen';
@@ -11,21 +12,31 @@ import { colors, weights } from '../styles/theme';
 const Tab = createBottomTabNavigator();
 
 const TAB_ICONS = {
-  Mapa:    { active: 'map',         inactive: 'map-outline' },
-  Reservas:{ active: 'calendar',    inactive: 'calendar-outline' },
-  Cartera: { active: 'wallet',      inactive: 'wallet-outline' },
-  Perfil:  { active: 'person',      inactive: 'person-outline' },
+  Mapa:     { active: 'map',      inactive: 'map-outline' },
+  Reservas: { active: 'calendar', inactive: 'calendar-outline' },
+  Cartera:  { active: 'wallet',   inactive: 'wallet-outline' },
+  Perfil:   { active: 'person',   inactive: 'person-outline' },
 };
 
 function TabIcon({ routeName, focused }) {
   const icons = TAB_ICONS[routeName] ?? { active: 'ellipse', inactive: 'ellipse-outline' };
-  const iconName = focused ? icons.active : icons.inactive;
-  const color    = focused ? colors.green : colors.textMuted;
+
+  if (focused) {
+    return (
+      <LinearGradient
+        colors={['#00BAFF', '#00FF8C']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.activePill}
+      >
+        <Ionicons name={icons.active} size={20} color="#050A15" />
+      </LinearGradient>
+    );
+  }
 
   return (
-    <View style={styles.iconWrap}>
-      <Ionicons name={iconName} size={22} color={color} />
-      {focused && <View style={styles.activeBar} />}
+    <View style={styles.inactiveWrap}>
+      <Ionicons name={icons.inactive} size={22} color={colors.textMuted} />
     </View>
   );
 }
@@ -57,8 +68,8 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255,255,255,0.07)',
     borderTopWidth: 1,
     height: 62 + (Platform.OS === 'ios' ? 14 : 0),
-    paddingTop: 6,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 6,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
   },
   tabLabel: {
     fontSize: 10,
@@ -66,17 +77,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: 0.3,
   },
-  iconWrap: {
+  activePill: {
+    width: 44,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 30,
   },
-  activeBar: {
-    position: 'absolute',
-    bottom: -6,
-    width: 18,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.green,
+  inactiveWrap: {
+    width: 44,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

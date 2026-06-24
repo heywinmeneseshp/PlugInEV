@@ -10,13 +10,17 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import GradientButton from '../components/GradientButton';
 import { colors, fonts, weights, radius } from '../styles/theme';
 
 const CONNECTOR_TYPES = ['CCS', 'CHAdeMO', 'Type 2', 'GB/T'];
 
 export default function RegisterScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { register } = useAuth();
 
@@ -49,13 +53,11 @@ export default function RegisterScreen() {
       Alert.alert('Contraseñas no coinciden', 'Verifica que las contraseñas sean iguales');
       return;
     }
-
     setLoading(true);
     try {
       await register({ nombre, apellido, correo, celular, modeloCarro, connector, password });
       navigation.navigate('OTP', { email: correo });
     } catch {
-      // handled by auth context
     } finally {
       setLoading(false);
     }
@@ -63,12 +65,12 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backArrow}>{'<'}</Text>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Crear cuenta</Text>
         <View style={styles.backButton} />
@@ -80,67 +82,27 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Nombre</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nombre"
-            placeholderTextColor={colors.textHint}
-            value={nombre}
-            onChangeText={setNombre}
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Apellido</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Apellido"
-            placeholderTextColor={colors.textHint}
-            value={apellido}
-            onChangeText={setApellido}
-            autoCapitalize="words"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Correo</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="tu@correo.com"
-            placeholderTextColor={colors.textHint}
-            value={correo}
-            onChangeText={setCorreo}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Celular</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="+57 300 000 0000"
-            placeholderTextColor={colors.textHint}
-            value={celular}
-            onChangeText={setCelular}
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Modelo de carro</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej: Tesla Model 3"
-            placeholderTextColor={colors.textHint}
-            value={modeloCarro}
-            onChangeText={setModeloCarro}
-            autoCapitalize="words"
-          />
-        </View>
+        {[
+          { label: 'Nombre', value: nombre, setter: setNombre, placeholder: 'Nombre', capitalize: 'words' },
+          { label: 'Apellido', value: apellido, setter: setApellido, placeholder: 'Apellido', capitalize: 'words' },
+          { label: 'Correo', value: correo, setter: setCorreo, placeholder: 'tu@correo.com', keyboard: 'email-address', capitalize: 'none' },
+          { label: 'Celular', value: celular, setter: setCelular, placeholder: '+57 300 000 0000', keyboard: 'phone-pad' },
+          { label: 'Modelo de carro', value: modeloCarro, setter: setModeloCarro, placeholder: 'Ej: Tesla Model 3', capitalize: 'words' },
+        ].map(({ label, value, setter, placeholder, keyboard, capitalize }) => (
+          <View key={label} style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>{label}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={placeholder}
+              placeholderTextColor={colors.textHint}
+              value={value}
+              onChangeText={setter}
+              keyboardType={keyboard || 'default'}
+              autoCapitalize={capitalize || 'sentences'}
+              autoCorrect={false}
+            />
+          </View>
+        ))}
 
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Tipo de conector</Text>
@@ -151,112 +113,66 @@ export default function RegisterScreen() {
                 style={[styles.chip, connector === type && styles.chipActive]}
                 onPress={() => setConnector(type)}
               >
-                <Text style={[styles.chipText, connector === type && styles.chipTextActive]}>
-                  {type}
-                </Text>
+                <Text style={[styles.chipText, connector === type && styles.chipTextActive]}>{type}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Contraseña</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Mínimo 8 caracteres"
-            placeholderTextColor={colors.textHint}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
+        {[
+          { label: 'Contraseña', value: password, setter: setPassword, placeholder: 'Mínimo 8 caracteres' },
+          { label: 'Confirmar contraseña', value: confirmPassword, setter: setConfirmPassword, placeholder: 'Repite la contraseña' },
+        ].map(({ label, value, setter, placeholder }) => (
+          <View key={label} style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>{label}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={placeholder}
+              placeholderTextColor={colors.textHint}
+              value={value}
+              onChangeText={setter}
+              secureTextEntry
+            />
+          </View>
+        ))}
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Confirmar contraseña</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Repite la contraseña"
-            placeholderTextColor={colors.textHint}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+        <GradientButton
+          label={loading ? 'Creando cuenta...' : 'Continuar'}
           onPress={handleSubmit}
           disabled={loading}
-        >
-          <Text style={styles.submitButtonText}>
-            {loading ? 'Creando cuenta...' : 'Continuar'}
-          </Text>
-        </TouchableOpacity>
+          style={{ marginTop: 24, marginBottom: 40 }}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
+    paddingVertical: 14,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: fonts['4xl'],
-    color: colors.accent,
-    fontWeight: weights.bold,
-  },
-  headerTitle: {
-    fontSize: fonts['3xl'],
-    fontWeight: weights.semibold,
-    color: colors.white,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: fonts.md,
-    color: colors.textSecondary,
-    marginBottom: 8,
-    fontWeight: weights.medium,
-  },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: weights.bold, color: colors.textPrimary },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 24, paddingBottom: 40 },
+  inputGroup: { marginBottom: 16 },
+  inputLabel: { fontSize: fonts.md, color: colors.textSecondary, marginBottom: 8, fontWeight: weights.medium },
   input: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: fonts.xl,
-    color: colors.white,
+    color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -265,37 +181,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  chipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  chipText: {
-    fontSize: fonts.md,
-    color: colors.textSecondary,
-    fontWeight: weights.medium,
-  },
-  chipTextActive: {
-    color: colors.bg,
-    fontWeight: weights.bold,
-  },
-  submitButton: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.xl,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: fonts['2xl'],
-    fontWeight: weights.bold,
-    color: colors.bg,
-  },
+  chipActive: { backgroundColor: colors.cyanDim, borderColor: colors.cyan },
+  chipText: { fontSize: fonts.md, color: colors.textSecondary, fontWeight: weights.medium },
+  chipTextActive: { color: colors.cyan, fontWeight: weights.bold },
 });

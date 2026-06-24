@@ -6,17 +6,20 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import GradientButton from '../components/GradientButton';
 import { colors, fonts, weights, radius } from '../styles/theme';
 
 const OTP_LENGTH = 8;
 const RESEND_DELAY = 60;
 
 export default function OTPScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const route = useRoute();
   const { verifyOTP } = useAuth();
@@ -39,16 +42,12 @@ export default function OTPScreen() {
   const handleChange = useCallback((text, index) => {
     const digit = text.replace(/[^0-9]/g, '');
     if (!digit && text.length > 0) return;
-
     setOtp((prev) => {
       const next = [...prev];
       next[index] = digit.slice(-1);
       return next;
     });
-
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    if (digit && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus();
   }, []);
 
   const handleKeyPress = useCallback((e, index) => {
@@ -67,13 +66,11 @@ export default function OTPScreen() {
   const handleVerify = async () => {
     const code = otp.join('');
     if (code.length !== OTP_LENGTH) return;
-
     setLoading(true);
     try {
       await verifyOTP(code);
       navigation.navigate('RolSelection');
     } catch {
-      // handled by auth context
     } finally {
       setLoading(false);
     }
@@ -81,21 +78,16 @@ export default function OTPScreen() {
 
   const isComplete = otp.every((d) => d !== '');
   const displayEmail = email.length > 30 ? email.slice(0, 27) + '...' : email;
-
-  const formatTimer = (s) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
-  };
+  const formatTimer = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backArrow}>{'<'}</Text>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Verificar código</Text>
         <View style={styles.backButton} />
@@ -130,61 +122,34 @@ export default function OTPScreen() {
           <Text style={styles.timerText}>Reenviar en {formatTimer(timer)}</Text>
         )}
 
-        <TouchableOpacity
-          style={[styles.verifyButton, (!isComplete || loading) && styles.verifyButtonDisabled]}
+        <GradientButton
+          label={loading ? 'Verificando...' : 'Verificar'}
           onPress={handleVerify}
           disabled={!isComplete || loading}
-        >
-          <Text style={styles.verifyButtonText}>
-            {loading ? 'Verificando...' : 'Verificar'}
-          </Text>
-        </TouchableOpacity>
+        />
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
+    paddingVertical: 14,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: fonts['4xl'],
-    color: colors.accent,
-    fontWeight: weights.bold,
-  },
-  headerTitle: {
-    fontSize: fonts['3xl'],
-    fontWeight: weights.semibold,
-    color: colors.white,
-  },
-  body: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 32,
-    alignItems: 'center',
-  },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: weights.bold, color: colors.textPrimary },
+  body: { flex: 1, paddingHorizontal: 24, paddingTop: 32, alignItems: 'center' },
   description: {
     fontSize: fonts.md,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   otpRow: {
     flexDirection: 'row',
@@ -200,48 +165,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    color: colors.white,
+    color: colors.textPrimary,
     fontSize: fonts['5xl'],
     fontWeight: weights.bold,
     textAlign: 'center',
-    textAlignVertical: 'center',
   },
-  otpInputFilled: {
-    borderColor: colors.accent,
-  },
-  resendButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginBottom: 24,
-  },
-  resendText: {
-    fontSize: fonts.lg,
-    color: colors.accent,
-    fontWeight: weights.semibold,
-  },
-  timerText: {
-    fontSize: fonts.md,
-    color: colors.textMuted,
-    marginBottom: 24,
-  },
-  verifyButton: {
-    backgroundColor: colors.accent,
-    borderRadius: radius.xl,
-    paddingVertical: 16,
-    alignItems: 'center',
-    width: '100%',
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  verifyButtonDisabled: {
-    opacity: 0.4,
-  },
-  verifyButtonText: {
-    fontSize: fonts['2xl'],
-    fontWeight: weights.bold,
-    color: colors.bg,
-  },
+  otpInputFilled: { borderColor: colors.cyan },
+  resendButton: { paddingVertical: 12, paddingHorizontal: 24, marginBottom: 24 },
+  resendText: { fontSize: fonts.lg, color: colors.cyan, fontWeight: weights.semibold },
+  timerText: { fontSize: fonts.md, color: colors.textMuted, marginBottom: 24 },
 });
