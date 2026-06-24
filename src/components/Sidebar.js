@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,255,140,0.12)',
     borderRadius: radius.full,
     paddingHorizontal: 8, paddingVertical: 2,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     borderWidth: 1, borderColor: 'rgba(0,255,140,0.3)',
     marginBottom: 3,
   },
