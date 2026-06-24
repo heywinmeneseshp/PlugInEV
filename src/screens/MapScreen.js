@@ -2,20 +2,18 @@ import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Dimensions,
   TouchableOpacity,
   Platform,
   FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import mockStations from '../data/mockData';
 import { formatCOP } from '../utils/format';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, weights, radius } from '../styles/theme';
-import FloatingHeader from '../components/FloatingHeader';
 import SearchBar from '../components/SearchBar';
 import LocationButton from '../components/LocationButton';
 import StationBottomSheet from '../components/StationBottomSheet';
@@ -114,6 +112,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Map or web fallback */}
       {isNative ? (
         <MapView
           ref={mapRef}
@@ -121,7 +120,7 @@ export default function MapScreen() {
           initialRegion={INITIAL_REGION}
           customMapStyle={darkMapStyle}
           onPress={handleMapPress}
-          mapPadding={{ top: 200, right: 0, bottom: sheetVisible ? 140 : 16, left: 0 }}
+          mapPadding={{ top: 180, right: 0, bottom: sheetVisible ? 140 : 16, left: 0 }}
           showsUserLocation
           showsMyLocationButton={false}
           rotateEnabled={false}
@@ -151,32 +150,37 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Top UI */}
-      <View style={[styles.topSection, { paddingTop: insets.top + 8 }]}>
-        {/* Row: hamburger + wallet widget */}
+      {/* ── Top overlay ── */}
+      <View style={[styles.topOverlay, { paddingTop: insets.top + 10 }]}>
+
+        {/* Row 1: hamburger ←→ wallet */}
         <View style={styles.topRow}>
-          <TouchableOpacity style={styles.menuButton} onPress={() => setSidebarOpen(true)}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => setSidebarOpen(true)}>
             <Ionicons name="menu-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
 
-          {/* Wallet widget glassmorphism */}
           <View style={styles.walletWidget}>
-            <Text style={styles.walletBalance}>{formatCOP(walletBalance)}</Text>
-            <Text style={styles.walletLabel}>Saldo disponible</Text>
+            <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} style={{ marginRight: 5 }} />
+            <View>
+              <Text style={styles.walletBalance}>{formatCOP(walletBalance)}</Text>
+              <Text style={styles.walletLabel}>Saldo disponible</Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.searchPadding}>
+        {/* Row 2: search bar */}
+        <View style={styles.searchRow}>
           <SearchBar
             onFocus={() => setShowSearch(true)}
-            onLocationPress={() => {
-              mapRef.current?.animateToRegion(INITIAL_REGION, 800);
-            }}
+            onLocationPress={() => mapRef.current?.animateToRegion(INITIAL_REGION, 800)}
           />
         </View>
+
+        {/* Row 3: filter chips */}
         <FilterBar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
       </View>
 
+      {/* Modals / overlays */}
       <SearchModal
         visible={showSearch}
         onClose={() => setShowSearch(false)}
@@ -190,8 +194,9 @@ export default function MapScreen() {
         userRole={userRole}
       />
 
+      {/* Location FAB */}
       {!sheetVisible && (
-        <View style={styles.locationWrapper}>
+        <View style={[styles.locationWrapper, { bottom: insets.bottom + 24 }]}>
           <LocationButton onPress={() => mapRef.current?.animateToRegion(INITIAL_REGION, 800)} />
         </View>
       )}
@@ -224,16 +229,16 @@ function CustomMarker({ station }) {
 }
 
 const darkMapStyle = [
-  { elementType: 'geometry', stylers: [{ color: '#050A15' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0A1525' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#A0AEC0' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#0D1626' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#A0AEC0' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#030810' }] },
+  { elementType: 'geometry',              stylers: [{ color: '#050A15' }] },
+  { elementType: 'labels.text.stroke',    stylers: [{ color: '#0A1525' }] },
+  { elementType: 'labels.text.fill',      stylers: [{ color: '#A0AEC0' }] },
+  { featureType: 'road', elementType: 'geometry',          stylers: [{ color: '#0D1626' }] },
+  { featureType: 'road', elementType: 'labels.text.fill',  stylers: [{ color: '#A0AEC0' }] },
+  { featureType: 'water', elementType: 'geometry',         stylers: [{ color: '#030810' }] },
   { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#475569' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#0D1626' }] },
-  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#64748B' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#0D1626' }] },
-  { featureType: 'administrative', elementType: 'geometry.fill', stylers: [{ color: '#050A15' }] },
-  { featureType: 'administrative', elementType: 'labels.text.fill', stylers: [{ color: '#64748B' }] },
+  { featureType: 'poi',   elementType: 'geometry',         stylers: [{ color: '#0D1626' }] },
+  { featureType: 'poi',   elementType: 'labels.text.fill', stylers: [{ color: '#64748B' }] },
+  { featureType: 'transit',      elementType: 'geometry',          stylers: [{ color: '#0D1626' }] },
+  { featureType: 'administrative', elementType: 'geometry.fill',   stylers: [{ color: '#050A15' }] },
+  { featureType: 'administrative', elementType: 'labels.text.fill',stylers: [{ color: '#64748B' }] },
 ];

@@ -1,17 +1,21 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, fonts, weights } from '../styles/theme';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { colors, weights } from '../styles/theme';
 
 const FILTERS = [
-  { key: 'all', label: 'Todas' },
-  { key: 'free', label: 'Gratis' },
-  { key: 'paid', label: 'Pago' },
-  { key: 'available', label: 'Disponibles ahora' },
+  { key: 'all',       label: 'Todas' },
+  { key: 'available', label: 'Disponibles' },
+  { key: 'free',      label: 'Gratis' },
+  { key: 'paid',      label: 'Pago' },
 ];
 
 export default function FilterBar({ activeFilter, onFilterChange }) {
   return (
-    <View style={styles.row}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.row}
+    >
       {FILTERS.map((f) => {
         const isActive = activeFilter === f.key;
         return (
@@ -27,43 +31,36 @@ export default function FilterBar({ activeFilter, onFilterChange }) {
           </TouchableOpacity>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingHorizontal: 8,
-    gap: 6,
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingVertical: 2,
   },
   chip: {
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(16, 27, 46, 0.92)',
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(13,22,38,0.92)',
     paddingHorizontal: 14,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
   chipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: colors.cyanDim,
+    borderColor: colors.cyan,
   },
   chipText: {
-    fontSize: fonts.md,
+    fontSize: 12,
     fontWeight: weights.semibold,
-    color: colors.white,
+    color: colors.textSecondary,
   },
   chipTextActive: {
-    color: colors.bg,
+    color: colors.cyan,
   },
 });

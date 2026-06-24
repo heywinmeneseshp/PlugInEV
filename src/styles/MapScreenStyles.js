@@ -1,7 +1,5 @@
-import { StyleSheet, Dimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { colors, fonts, weights, radius } from './theme';
-
-const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
@@ -11,6 +9,8 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
+
+  /* Web fallback list */
   webFallback: {
     flex: 1,
     paddingTop: 100,
@@ -51,8 +51,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   statusDot: {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: 5,
     marginRight: 12,
   },
@@ -78,63 +78,77 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
-  /* Top section */
-  topSection: {
+  /* ── Top overlay ── */
+  topOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     zIndex: 15,
+    gap: 10,
+    paddingBottom: 8,
   },
+
+  /* Row 1 — hamburger + wallet side by side */
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  menuButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+
+  /* Hamburger icon button */
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(13,22,38,0.92)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  menuButtonText: { fontSize: 16, color: colors.textPrimary },
 
-  /* Wallet widget — glassmorphism top-right */
+  /* Wallet glassmorphism chip */
   walletWidget: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(13,22,38,0.92)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(255,255,255,0.12)',
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    alignItems: 'flex-end',
-    minWidth: 130,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   walletBalance: {
-    fontSize: fonts['4xl'],
+    fontSize: fonts['2xl'],
     fontWeight: weights.bold,
     color: colors.green,
+    lineHeight: 20,
   },
   walletLabel: {
     fontSize: fonts.xs,
     color: colors.textSecondary,
-    marginTop: 1,
   },
 
-  searchPadding: {
+  /* Row 2 — search bar */
+  searchRow: {
     paddingHorizontal: 16,
-    marginTop: 10,
   },
 
-  /* Location button */
+  /* Location FAB */
   locationWrapper: {
     position: 'absolute',
-    bottom: 16,
     right: 16,
     zIndex: 10,
   },
@@ -142,8 +156,8 @@ const styles = StyleSheet.create({
   /* Markers */
   markerWrapper: { alignItems: 'center' },
   markerCard: {
-    backgroundColor: '#050A15',
-    borderRadius: radius.sm,
+    backgroundColor: 'rgba(5,10,21,0.9)',
+    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderWidth: 1.5,
@@ -154,24 +168,24 @@ const styles = StyleSheet.create({
     fontWeight: weights.bold,
   },
   markerDotContainer: {
-    width: 28,
-    height: 28,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
   markerBubble: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(255,255,255,0.35)',
     zIndex: 1,
   },
   markerPulse: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     opacity: 0.2,
   },
 });
