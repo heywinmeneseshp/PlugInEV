@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
@@ -12,29 +13,27 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import GradientButton from '../components/GradientButton';
 import PluginLogo from '../components/PluginLogo';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
+const LOGO_U = require('../../assets/logo_u.png');
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) return;
     setLoading(true);
-    try {
-      await login(email, password);
-    } catch {
-      setLoading(false);
-    }
+    try { await login(email, password); }
+    catch { setLoading(false); }
   };
 
   return (
@@ -42,16 +41,27 @@ export default function LoginScreen() {
       style={[styles.container, { paddingTop: insets.top }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* Background glow */}
+      {/* Glow de fondo */}
       <View style={styles.glowTop} />
+      <View style={styles.glowBottom} />
 
-      {/* Logo */}
-      <View style={styles.logoSection}>
-        <PluginLogo variant="wordmark" size={0.6} />
-        <Text style={styles.logoSub}>Carga inteligente para tu EV</Text>
+      {/* Hero — isotipo grande + wordmark + tagline */}
+      <View style={styles.hero}>
+        {/* Isotipo con halo gradiente */}
+        <View style={styles.isotipoHalo}>
+          <LinearGradient
+            colors={['rgba(0,186,255,0.18)', 'rgba(0,255,140,0.14)']}
+            style={styles.isotipoGlow}
+          >
+            <Image source={LOGO_U} style={styles.isotipoImg} resizeMode="contain" />
+          </LinearGradient>
+        </View>
+
+        <PluginLogo variant="wordmark" size={0.62} />
+        <Text style={styles.tagline}>Carga inteligente para tu EV</Text>
       </View>
 
-      {/* Form */}
+      {/* Tarjeta del formulario */}
       <View style={styles.formCard}>
         <Text style={styles.formTitle}>Iniciar sesión</Text>
 
@@ -92,9 +102,9 @@ export default function LoginScreen() {
           style={styles.registerButton}
           onPress={() => navigation.navigate('Register')}
         >
-          <Text style={styles.registerButtonText}>
+          <Text style={styles.registerText}>
             ¿No tienes cuenta?{' '}
-            <Text style={styles.registerButtonAccent}>Crear cuenta</Text>
+            <Text style={styles.registerAccent}>Crear cuenta</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -110,48 +120,57 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     alignItems: 'center',
   },
+
+  /* Glows de ambiente */
   glowTop: {
     position: 'absolute',
-    top: -60,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(0,186,255,0.08)',
+    top: -80,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(0,186,255,0.09)',
   },
-  logoSection: {
+  glowBottom: {
+    position: 'absolute',
+    bottom: -60,
+    right: -60,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(0,255,140,0.06)',
+  },
+
+  /* Hero */
+  hero: {
     alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 32,
+    marginTop: 32,
+    marginBottom: 28,
+    gap: 12,
   },
-  logoIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.greenDim,
-    borderWidth: 1.5,
-    borderColor: colors.green,
+  isotipoHalo: {
+    marginBottom: 4,
+  },
+  isotipoGlow: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: colors.green,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,140,0.2)',
   },
-  logoEmoji: { fontSize: 32 },
-  logoTitle: {
-    fontSize: 28,
-    fontWeight: weights.bold,
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
-    marginBottom: 6,
+  isotipoImg: {
+    width: 62,
+    height: 62,
   },
-  logoSub: {
+  tagline: {
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: weights.medium,
+    marginTop: -4,
   },
+
+  /* Form */
   formCard: {
     width: width - 32,
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -185,38 +204,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
   },
-  loginButton: {
-    height: 52,
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: colors.green,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    fontSize: 16,
-    fontWeight: weights.bold,
-    color: '#050A15',
-    letterSpacing: 0.3,
-  },
   registerButton: {
     alignItems: 'center',
     marginTop: 16,
     paddingVertical: 8,
   },
-  registerButtonText: {
+  registerText: {
     fontSize: 14,
     color: colors.textSecondary,
   },
-  registerButtonAccent: {
+  registerAccent: {
     color: colors.cyan,
     fontWeight: weights.semibold,
   },
