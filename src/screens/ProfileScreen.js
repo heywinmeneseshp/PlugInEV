@@ -41,9 +41,6 @@ export default function ProfileScreen() {
 
         {/* ── Hero avatar ── */}
         <View style={s.heroSection}>
-          {/* Glow de fondo */}
-          <View style={s.avatarGlow} />
-
           {/* Avatar con halo gradiente */}
           <LinearGradient
             colors={['#00BAFF', '#00FF8C']}
@@ -142,12 +139,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginTop: 16,
     marginBottom: 32,
-  },
-  avatarGlow: {
-    position: 'absolute',
-    top: -20,
-    width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(0,186,255,0.07)',
   },
   avatarRing: {
     width: 88, height: 88, borderRadius: 44,
