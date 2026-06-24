@@ -68,7 +68,6 @@ export default function Sidebar({ visible, onClose }) {
 
         {/* ── Perfil ── */}
         <View style={styles.profileCard}>
-          {/* Avatar con halo gradiente */}
           <LinearGradient
             colors={['#00BAFF', '#00FF8C']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -79,13 +78,11 @@ export default function Sidebar({ visible, onClose }) {
             </View>
           </LinearGradient>
 
-          <View style={styles.profileInfo}>
-            <Text style={styles.userName}>{user?.nombre || 'Usuario'}</Text>
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={11} color={colors.green} />
-              <Text style={styles.verifiedText}> Verificado</Text>
-            </View>
-            <Text style={styles.userEmail}>{user?.email}</Text>
+          <Text style={styles.userName}>{user?.nombre || 'Usuario'}</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={11} color={colors.green} />
+            <Text style={styles.verifiedText}> Verificado</Text>
           </View>
         </View>
 
@@ -185,40 +182,38 @@ const styles = StyleSheet.create({
 
   /* Profile card */
   profileCard: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.09)',
     borderRadius: radius.xl,
-    padding: 14,
+    paddingVertical: 20,
+    paddingHorizontal: 14,
     marginBottom: 20,
+    gap: 6,
   },
   avatarRing: {
-    width: 52, height: 52, borderRadius: 26,
-    padding: 2,
+    width: 64, height: 64, borderRadius: 32,
+    padding: 2.5,
     alignItems: 'center', justifyContent: 'center',
+    marginBottom: 4,
   },
   avatar: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 59, height: 59, borderRadius: 29.5,
     backgroundColor: '#0D1A2D',
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { fontSize: 20, fontWeight: weights.bold, color: colors.green },
-  profileInfo: { flex: 1, alignItems: 'center' },
-  userName: { fontSize: 15, fontWeight: weights.bold, color: colors.textPrimary, marginBottom: 3 },
+  avatarText: { fontSize: 22, fontWeight: weights.bold, color: colors.green },
+  userName: { fontSize: 16, fontWeight: weights.bold, color: colors.textPrimary },
   verifiedBadge: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: 'rgba(0,255,140,0.12)',
     borderRadius: radius.full,
-    paddingHorizontal: 8, paddingVertical: 2,
-    alignSelf: 'center',
+    paddingHorizontal: 8, paddingVertical: 3,
     borderWidth: 1, borderColor: 'rgba(0,255,140,0.3)',
-    marginBottom: 3,
   },
   verifiedText: { fontSize: 10, color: colors.green, fontWeight: weights.semibold },
-  userEmail: { fontSize: 11, color: colors.textMuted },
+  userEmail: { fontSize: 12, color: colors.textMuted },
 
   /* Sections */
   section: { marginBottom: 16 },
