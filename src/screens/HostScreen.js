@@ -17,7 +17,7 @@ const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 export default function HostScreen() {
   const insets     = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { user, hostStation, logout } = useAuth();
+  const { user, hostStation, logout, switchRole } = useAuth();
   const station = hostStation;
   const [online, setOnline] = useState(station?.available ?? true);
 
@@ -66,8 +66,8 @@ export default function HostScreen() {
 
       {/* ── Header ── */}
       <View style={s.header}>
-        <TouchableOpacity onPress={logout} style={s.headerBtn}>
-          <Ionicons name="log-out-outline" size={20} color={colors.textSecondary} />
+        <TouchableOpacity onPress={() => switchRole('conductor')} style={s.headerBtn}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Dashboard</Text>
         <TouchableOpacity

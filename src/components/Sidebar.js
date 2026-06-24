@@ -25,7 +25,7 @@ const MENU_ITEMS = [
 export default function Sidebar({ visible, onClose }) {
   const insets    = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
   const slideAnim   = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const [hostMode, setHostMode] = React.useState(false);
@@ -101,7 +101,7 @@ export default function Sidebar({ visible, onClose }) {
               <Text style={styles.toggleLabel}>Modo Anfitrión</Text>
               <Switch
                 value={hostMode}
-                onValueChange={setHostMode}
+                onValueChange={(val) => { setHostMode(val); if (val) { onClose(); setTimeout(() => switchRole('anfitrion'), 300); } }}
                 trackColor={{ false: colors.trackBg, true: 'rgba(0,186,255,0.4)' }}
                 thumbColor={hostMode ? colors.cyan : colors.textMuted}
                 ios_backgroundColor={colors.trackBg}

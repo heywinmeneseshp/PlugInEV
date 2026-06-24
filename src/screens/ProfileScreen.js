@@ -17,7 +17,7 @@ const LOGO_U = require('../../assets/logo_u.png');
 export default function ProfileScreen() {
   const insets     = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
 
   const initials = user?.nombre ? user.nombre.slice(0, 2).toUpperCase() : 'HE';
   const role     = user?.role || 'conductor';
@@ -96,7 +96,7 @@ export default function ProfileScreen() {
             style={{ marginBottom: 28 }}
           />
         ) : (
-          <TouchableOpacity style={s.hostBtn} onPress={() => navigation.navigate('AnfitrionStack')} activeOpacity={0.8}>
+          <TouchableOpacity style={s.hostBtn} onPress={() => switchRole('anfitrion')} activeOpacity={0.8}>
             <View style={s.hostBtnLeft}>
               <LinearGradient
                 colors={['rgba(0,186,255,0.2)', 'rgba(0,255,140,0.2)']}

@@ -98,6 +98,10 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'UPDATE_WALLET', payload: amount });
   }, []);
 
+  const switchRole = useCallback((role) => {
+    dispatch({ type: 'SET_USER', payload: { role } });
+  }, []);
+
   const logout = useCallback(() => {
     dispatch({ type: 'LOGOUT' });
   }, []);
@@ -111,6 +115,7 @@ export function AuthProvider({ children }) {
     finishRegistration,
     setHostStation,
     updateWallet,
+    switchRole,
     logout,
   };
 
