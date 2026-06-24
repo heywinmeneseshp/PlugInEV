@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import MapScreen from '../screens/MapScreen';
 import ReservationsScreen from '../screens/ReservationsScreen';
 import WalletScreen from '../screens/WalletScreen';
@@ -10,22 +11,21 @@ import { colors, weights } from '../styles/theme';
 const Tab = createBottomTabNavigator();
 
 const TAB_ICONS = {
-  Mapa: { active: '🗺️', inactive: '🗺️' },
-  Reservas: { active: '📋', inactive: '📋' },
-  Sesiones: { active: '⚡', inactive: '⚡' },
-  Cartera: { active: '💳', inactive: '💳' },
-  Perfil: { active: '👤', inactive: '👤' },
+  Mapa:    { active: 'map',         inactive: 'map-outline' },
+  Reservas:{ active: 'calendar',    inactive: 'calendar-outline' },
+  Cartera: { active: 'wallet',      inactive: 'wallet-outline' },
+  Perfil:  { active: 'person',      inactive: 'person-outline' },
 };
 
 function TabIcon({ routeName, focused }) {
-  const icons = TAB_ICONS[routeName];
-  const color = focused ? colors.green : colors.textMuted;
+  const icons = TAB_ICONS[routeName] ?? { active: 'ellipse', inactive: 'ellipse-outline' };
+  const iconName = focused ? icons.active : icons.inactive;
+  const color    = focused ? colors.green : colors.textMuted;
+
   return (
-    <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-      <Text style={[styles.tabEmoji, { opacity: focused ? 1 : 0.5 }]}>
-        {icons?.active || '●'}
-      </Text>
-      {focused && <View style={[styles.activeBar, { backgroundColor: colors.green }]} />}
+    <View style={styles.iconWrap}>
+      <Ionicons name={iconName} size={22} color={color} />
+      {focused && <View style={styles.activeBar} />}
     </View>
   );
 }
@@ -43,10 +43,10 @@ export default function ConductorTabs() {
         tabBarIcon: ({ focused }) => <TabIcon routeName={route.name} focused={focused} />,
       })}
     >
-      <Tab.Screen name="Mapa" component={MapScreen} />
+      <Tab.Screen name="Mapa"     component={MapScreen} />
       <Tab.Screen name="Reservas" component={ReservationsScreen} />
-      <Tab.Screen name="Cartera" component={WalletScreen} />
-      <Tab.Screen name="Perfil" component={ProfileScreen} />
+      <Tab.Screen name="Cartera"  component={WalletScreen} />
+      <Tab.Screen name="Perfil"   component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
@@ -67,22 +67,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   iconWrap: {
-    width: 32,
-    height: 26,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconWrapActive: {
-    position: 'relative',
-  },
-  tabEmoji: {
-    fontSize: 18,
+    height: 30,
   },
   activeBar: {
     position: 'absolute',
     bottom: -6,
-    width: 20,
+    width: 18,
     height: 2,
     borderRadius: 1,
+    backgroundColor: colors.green,
   },
 });

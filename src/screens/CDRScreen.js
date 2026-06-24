@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { formatCOP } from '../utils/format';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, weights, radius } from '../styles/theme';
 
 function formatDateTime() {
@@ -34,7 +35,11 @@ function StarRating({ rating, onRate }) {
     <View style={s.starsRow}>
       {[1, 2, 3, 4, 5].map((i) => (
         <TouchableOpacity key={i} onPress={() => onRate(i)} activeOpacity={0.7}>
-          <Text style={[s.star, i <= rating && s.starActive]}>★</Text>
+          <Ionicons
+            name={i <= rating ? 'star' : 'star-outline'}
+            size={34}
+            color={i <= rating ? colors.yellow : colors.trackBg}
+          />
         </TouchableOpacity>
       ))}
     </View>
@@ -77,7 +82,7 @@ export default function CDRScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={goToMap}>
-          <Text style={s.backIcon}>←</Text>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Recibo Final</Text>
         <View style={{ width: 40 }} />
@@ -87,7 +92,7 @@ export default function CDRScreen() {
         {/* Success badge */}
         <View style={s.successSection}>
           <View style={s.successOrb}>
-            <Text style={s.successEmoji}>✓</Text>
+            <Ionicons name="checkmark" size={36} color={colors.green} />
           </View>
           <Text style={s.successTitle}>Carga Finalizada</Text>
           <Text style={s.successSub}>Exitosamente</Text>
@@ -102,19 +107,19 @@ export default function CDRScreen() {
         {/* Main metrics */}
         <View style={s.metricsRow}>
           <View style={s.metricCard}>
-            <Text style={s.metricEmoji}>⚡</Text>
+            <Ionicons name="flash-outline" size={18} color={colors.cyan} />
             <Text style={s.metricValue}>{telemetry.energy.toFixed(2)}</Text>
             <Text style={s.metricUnit}>kWh</Text>
             <Text style={s.metricLabel}>Energía Total</Text>
           </View>
           <View style={s.metricCard}>
-            <Text style={s.metricEmoji}>🕒</Text>
+            <Ionicons name="time-outline" size={18} color={colors.cyan} />
             <Text style={s.metricValue}>{formatDuration(telemetry.duration)}</Text>
             <Text style={s.metricUnit}>h:m:s</Text>
             <Text style={s.metricLabel}>Duración</Text>
           </View>
           <View style={s.metricCard}>
-            <Text style={s.metricEmoji}>⚙️</Text>
+            <Ionicons name="speedometer-outline" size={18} color={colors.cyan} />
             <Text style={s.metricValue}>{telemetry.power.toFixed(1)}</Text>
             <Text style={s.metricUnit}>kW</Text>
             <Text style={s.metricLabel}>Potencia Prom.</Text>

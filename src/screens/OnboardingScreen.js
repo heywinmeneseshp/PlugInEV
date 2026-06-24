@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, weights } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -17,19 +18,19 @@ const { width } = Dimensions.get('window');
 const SLIDES = [
   {
     id: '1',
-    icon: '📍',
+    icon: 'map-outline',
     title: 'Encuentra cargadores\ncerca de ti',
     subtitle: 'Miles de estaciones disponibles\nen tiempo real.',
   },
   {
     id: '2',
-    icon: '⚡',
+    icon: 'flash-outline',
     title: 'Carga inteligente\nsin filas',
     subtitle: 'Reserva con anticipación y llega\ncuando tu turno esté listo.',
   },
   {
     id: '3',
-    icon: '💳',
+    icon: 'wallet-outline',
     title: 'Paga fácil,\ncarga más',
     subtitle: 'Wallet integrado con escrow\ny recibo digital al instante.',
   },
@@ -63,7 +64,7 @@ export default function OnboardingScreen() {
       {/* Logo */}
       <View style={styles.logoRow}>
         <View style={styles.logoIcon}>
-          <Text style={styles.logoEmoji}>🔌</Text>
+          <Ionicons name="flash" size={20} color={colors.green} />
         </View>
         <Text style={styles.logoText}>plügin</Text>
       </View>
@@ -94,7 +95,7 @@ export default function OnboardingScreen() {
               <View style={styles.orbOuter}>
                 <View style={styles.orbMiddle}>
                   <View style={styles.orbInner}>
-                    <Text style={styles.slideIcon}>{item.icon}</Text>
+                    <Ionicons name={item.icon} size={44} color={colors.green} />
                   </View>
                 </View>
               </View>

@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { formatCOP } from '../utils/format';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -225,7 +226,7 @@ export default function ChargingSessionScreen() {
           onPress={() => navigation.goBack()}
           disabled={phase === 'cargando'}
         >
-          <Text style={[s.backIcon, phase === 'cargando' && { opacity: 0.3 }]}>←</Text>
+          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} style={{ opacity: phase === 'cargando' ? 0.3 : 1 }} />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.headerTitle}>Cargando en</Text>
@@ -248,7 +249,7 @@ export default function ChargingSessionScreen() {
           <View style={s.loadingSection}>
             <View style={s.loadingOrb}>
               <Animated.View style={[s.loadingOrbInner, { opacity: pulseAnim }]}>
-                <Text style={s.loadingEmoji}>🔌</Text>
+                <Ionicons name="flash" size={36} color={colors.cyan} />
               </Animated.View>
             </View>
             <Text style={s.loadingText}>{STATES[phase].label}</Text>
@@ -291,7 +292,7 @@ export default function ChargingSessionScreen() {
 
         {phase === 'detenido' && (
           <View style={s.stoppedSection}>
-            <Text style={s.stoppedEmoji}>⏹️</Text>
+            <Ionicons name="checkmark-circle-outline" size={56} color={colors.green} />
             <Text style={s.stoppedText}>Generando recibo digital...</Text>
           </View>
         )}

@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -45,7 +46,7 @@ export default function LoginScreen() {
       {/* Logo */}
       <View style={styles.logoSection}>
         <View style={styles.logoIcon}>
-          <Text style={styles.logoEmoji}>🔌</Text>
+          <Ionicons name="flash" size={32} color={colors.green} />
         </View>
         <Text style={styles.logoTitle}>plügin</Text>
         <Text style={styles.logoSub}>Carga inteligente para tu EV</Text>

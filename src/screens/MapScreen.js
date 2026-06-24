@@ -13,6 +13,7 @@ import mockStations from '../data/mockData';
 import { formatCOP } from '../utils/format';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, weights, radius } from '../styles/theme';
 import FloatingHeader from '../components/FloatingHeader';
 import SearchBar from '../components/SearchBar';
@@ -155,7 +156,7 @@ export default function MapScreen() {
         {/* Row: hamburger + wallet widget */}
         <View style={styles.topRow}>
           <TouchableOpacity style={styles.menuButton} onPress={() => setSidebarOpen(true)}>
-            <Text style={styles.menuButtonText}>☰</Text>
+            <Ionicons name="menu-outline" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
 
           {/* Wallet widget glassmorphism */}
