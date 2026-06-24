@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -82,14 +83,12 @@ export default function LoginScreen() {
           />
         </View>
 
-        <TouchableOpacity
-          style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+        <GradientButton
+          label={loading ? 'Ingresando...' : 'Entrar'}
           onPress={handleLogin}
-          activeOpacity={0.85}
           disabled={loading}
-        >
-          <Text style={styles.loginButtonText}>{loading ? 'Ingresando...' : 'Entrar'}</Text>
-        </TouchableOpacity>
+          style={{ marginTop: 8 }}
+        />
 
         <TouchableOpacity
           style={styles.registerButton}

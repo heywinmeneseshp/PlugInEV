@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 import { formatCOP } from '../utils/format';
 
@@ -201,13 +202,12 @@ export default function ReservationScreen() {
         </View>
 
         {/* Confirm button */}
-        <TouchableOpacity
-          style={[s.confirmButton, !math.canAfford && s.confirmButtonDisabled]}
+        <GradientButton
+          label="Confirmar Turno"
           onPress={handleConfirm}
-          activeOpacity={0.85}
-        >
-          <Text style={s.confirmText}>Confirmar Turno</Text>
-        </TouchableOpacity>
+          disabled={!math.canAfford}
+          style={{ marginTop: 8 }}
+        />
 
         <View style={{ height: insets.bottom + 24 }} />
       </ScrollView>

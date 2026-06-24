@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import GradientButton from './GradientButton';
 import { colors, fonts, weights } from '../styles/theme';
 import { formatCOP } from '../utils/format';
 
@@ -60,22 +61,20 @@ export default function StationBottomSheet({
           </View>
 
           {userRole === 'conductor' && (
-            <TouchableOpacity
-              style={[styles.reserveBtn, !station.available && styles.reserveBtnDisabled]}
+            <GradientButton
+              label={station.available ? 'Reservar' : 'No disponible'}
               onPress={() => station.available && onReserve(station)}
               disabled={!station.available}
-              activeOpacity={0.85}
-            >
-              <Ionicons
-                name={station.available ? 'flash' : 'ban-outline'}
-                size={16}
-                color={station.available ? '#050A15' : colors.textMuted}
-                style={{ marginBottom: 2 }}
-              />
-              <Text style={styles.reserveText}>
-                {station.available ? 'Reservar' : 'No disponible'}
-              </Text>
-            </TouchableOpacity>
+              height={52}
+              style={{ width: 120 }}
+              icon={
+                <Ionicons
+                  name={station.available ? 'flash' : 'ban-outline'}
+                  size={15}
+                  color={station.available ? '#050A15' : colors.textMuted}
+                />
+              }
+            />
           )}
         </View>
       </View>

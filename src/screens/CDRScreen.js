@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { formatCOP } from '../utils/format';
 import { Ionicons } from '@expo/vector-icons';
+import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 
 function formatDateTime() {
@@ -164,13 +165,7 @@ export default function CDRScreen() {
         </View>
 
         {/* Finish button */}
-        <TouchableOpacity
-          style={s.finishButton}
-          onPress={handleFinish}
-          activeOpacity={0.85}
-        >
-          <Text style={s.finishButtonText}>Finalizar</Text>
-        </TouchableOpacity>
+        <GradientButton label="Finalizar" onPress={handleFinish} />
 
         <View style={{ height: insets.bottom + 24 }} />
       </ScrollView>

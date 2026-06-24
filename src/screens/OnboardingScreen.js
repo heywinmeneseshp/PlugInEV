@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import GradientButton from '../components/GradientButton';
 import { colors, radius, weights } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -130,15 +131,11 @@ export default function OnboardingScreen() {
       </View>
 
       {/* CTA Button */}
-      <TouchableOpacity
-        style={[styles.ctaButton, { marginBottom: insets.bottom + 24 }]}
+      <GradientButton
+        label={currentIndex < SLIDES.length - 1 ? 'Siguiente' : 'Comenzar'}
         onPress={handleNext}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.ctaText}>
-          {currentIndex < SLIDES.length - 1 ? 'Siguiente' : 'Comenzar'}
-        </Text>
-      </TouchableOpacity>
+        style={{ width: width - 48, marginBottom: insets.bottom + 24 }}
+      />
     </View>
   );
 }
