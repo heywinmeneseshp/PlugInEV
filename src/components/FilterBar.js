@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, weights } from '../styles/theme';
 
 const FILTERS = [
@@ -15,20 +16,32 @@ export default function FilterBar({ activeFilter, onFilterChange }) {
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
-    style={styles.scroll}
+      style={styles.scroll}
     >
       {FILTERS.map((f) => {
         const isActive = activeFilter === f.key;
+        if (isActive) {
+          return (
+            <TouchableOpacity key={f.key} onPress={() => onFilterChange(f.key)} activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#00BAFF', '#00FF8C']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.chipActive}
+              >
+                <Text style={styles.chipTextActive}>{f.label}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          );
+        }
         return (
           <TouchableOpacity
             key={f.key}
-            style={[styles.chip, isActive && styles.chipActive]}
+            style={styles.chip}
             onPress={() => onFilterChange(f.key)}
             activeOpacity={0.75}
           >
-            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-              {f.label}
-            </Text>
+            <Text style={styles.chipText}>{f.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -37,9 +50,7 @@ export default function FilterBar({ activeFilter, onFilterChange }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flexGrow: 0,
-  },
+  scroll: { flexGrow: 0 },
   row: {
     flexDirection: 'row',
     flexGrow: 1,
@@ -52,14 +63,16 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: 'rgba(13,22,38,0.92)',
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
   },
   chipActive: {
-    backgroundColor: colors.cyanDim,
-    borderColor: colors.cyan,
+    height: 32,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
   chipText: {
     fontSize: 12,
@@ -67,6 +80,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   chipTextActive: {
-    color: colors.cyan,
+    fontSize: 12,
+    fontWeight: weights.bold,
+    color: '#050A15',
   },
 });
