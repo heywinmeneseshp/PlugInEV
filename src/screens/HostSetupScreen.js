@@ -61,7 +61,7 @@ export default function HostSetupScreen() {
       rating: 0,
     };
     setHostStation(station);
-    navigation.navigate('HostDashboard');
+    navigation.navigate('AnfitrionTabs');
   };
 
   const handleNext = () => {

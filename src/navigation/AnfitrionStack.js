@@ -10,7 +10,7 @@ const Stack = createNativeStackNavigator();
 export default function AnfitrionStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-      <Stack.Screen name="AnfitrionHome" component={AnfitrionTabs} />
+      <Stack.Screen name="AnfitrionTabs" component={AnfitrionTabs} />
       <Stack.Screen name="HostSetup"    component={HostSetupScreen} />
       <Stack.Screen name="HostConfig"   component={HostConfigScreen} />
       <Stack.Screen
