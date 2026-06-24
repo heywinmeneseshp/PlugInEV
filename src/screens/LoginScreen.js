@@ -6,6 +6,7 @@ import {
   TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   StyleSheet,
   Dimensions,
@@ -39,77 +40,86 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { paddingTop: insets.top }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      {/* Glow de fondo */}
+      {/* Glows estáticos de fondo */}
       <View style={styles.glowTop} />
       <View style={styles.glowBottom} />
 
-      {/* Hero — isotipo grande + wordmark + tagline */}
-      <View style={styles.hero}>
-        {/* Isotipo con halo gradiente */}
-        <View style={styles.isotipoHalo}>
-          <LinearGradient
-            colors={['rgba(0,186,255,0.18)', 'rgba(0,255,140,0.14)']}
-            style={styles.isotipoGlow}
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.isotipoHalo}>
+            <LinearGradient
+              colors={['rgba(0,186,255,0.18)', 'rgba(0,255,140,0.14)']}
+              style={styles.isotipoGlow}
+            >
+              <Image source={LOGO_U} style={styles.isotipoImg} resizeMode="contain" />
+            </LinearGradient>
+          </View>
+          <PluginLogo variant="wordmark" size={0.62} />
+          <Text style={styles.tagline}>Carga inteligente para tu EV</Text>
+        </View>
+
+        {/* Formulario */}
+        <View style={styles.formCard}>
+          <Text style={styles.formTitle}>Iniciar sesión</Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Correo electrónico</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="tu@correo.com"
+              placeholderTextColor={colors.textHint}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Contraseña</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textHint}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+            />
+          </View>
+
+          <GradientButton
+            label={loading ? 'Ingresando...' : 'Entrar'}
+            onPress={handleLogin}
+            disabled={loading}
+            style={{ marginTop: 8 }}
+          />
+
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={() => navigation.navigate('Register')}
           >
-            <Image source={LOGO_U} style={styles.isotipoImg} resizeMode="contain" />
-          </LinearGradient>
+            <Text style={styles.registerText}>
+              ¿No tienes cuenta?{' '}
+              <Text style={styles.registerAccent}>Crear cuenta</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <PluginLogo variant="wordmark" size={0.62} />
-        <Text style={styles.tagline}>Carga inteligente para tu EV</Text>
-      </View>
-
-      {/* Tarjeta del formulario */}
-      <View style={styles.formCard}>
-        <Text style={styles.formTitle}>Iniciar sesión</Text>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Correo electrónico</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="tu@correo.com"
-            placeholderTextColor={colors.textHint}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Contraseña</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            placeholderTextColor={colors.textHint}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
-
-        <GradientButton
-          label={loading ? 'Ingresando...' : 'Entrar'}
-          onPress={handleLogin}
-          disabled={loading}
-          style={{ marginTop: 8 }}
-        />
-
-        <TouchableOpacity
-          style={styles.registerButton}
-          onPress={() => navigation.navigate('Register')}
-        >
-          <Text style={styles.registerText}>
-            ¿No tienes cuenta?{' '}
-            <Text style={styles.registerAccent}>Crear cuenta</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={{ height: insets.bottom + 24 }} />
+        <View style={{ height: insets.bottom + 32 }} />
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -118,7 +128,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  scroll: {
     alignItems: 'center',
+    paddingHorizontal: 16,
+    flexGrow: 1,
   },
 
   /* Glows de ambiente */
@@ -172,7 +186,7 @@ const styles = StyleSheet.create({
 
   /* Form */
   formCard: {
-    width: width - 32,
+    width: '100%',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
