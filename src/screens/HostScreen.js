@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { formatCOP } from '../utils/format';
+import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -55,7 +56,13 @@ export default function HostScreen() {
             <Ionicons name="flash-outline" size={40} color={colors.cyan} />
           </LinearGradient>
           <Text style={s.emptyTitle}>Sin estaciones</Text>
-          <Text style={s.emptySub}>Completa el registro para{'\n'}gestionar tu punto de carga</Text>
+          <Text style={s.emptySub}>Registra tu primer punto de carga{'\n'}y empieza a recibir conductores</Text>
+          <GradientButton
+            label="Registrar estación"
+            onPress={() => navigation.navigate('HostSetup')}
+            icon={<Ionicons name="add-circle-outline" size={18} color="#050A15" />}
+            style={{ width: width - 80, marginTop: 8 }}
+          />
         </View>
       </View>
     );
@@ -70,14 +77,16 @@ export default function HostScreen() {
           <Ionicons name="arrow-back-outline" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Dashboard</Text>
-        <TouchableOpacity
-          style={s.avatarBtn}
-          onPress={() => navigation.navigate('HostConfig')}
-        >
-          <LinearGradient colors={['#00BAFF','#00FF8C']} style={s.avatarGrad}>
-            <Text style={s.avatarText}>{user?.nombre?.slice(0,2).toUpperCase() || 'HE'}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={s.addBtn} onPress={() => navigation.navigate('HostSetup')}>
+            <Ionicons name="add-outline" size={20} color={colors.cyan} />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.avatarBtn} onPress={() => navigation.navigate('HostConfig')}>
+            <LinearGradient colors={['#00BAFF','#00FF8C']} style={s.avatarGrad}>
+              <Text style={s.avatarText}>{user?.nombre?.slice(0,2).toUpperCase() || 'HE'}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
@@ -254,6 +263,12 @@ const s = StyleSheet.create({
   },
   headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: weights.bold, color: colors.textPrimary },
+  addBtn: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: 'rgba(0,186,255,0.12)',
+    borderWidth: 1, borderColor: 'rgba(0,186,255,0.25)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   avatarBtn: { width: 40, height: 40 },
   avatarGrad: {
     width: 40, height: 40, borderRadius: 20,
