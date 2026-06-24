@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import PluginLogo from './PluginLogo';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -67,7 +68,8 @@ export default function Sidebar({ visible, onClose }) {
       >
         {/* User info */}
         <View style={styles.userSection}>
-          <View style={styles.avatarRing}>
+          <PluginLogo variant="wordmark" size={0.38} />
+          <View style={[styles.avatarRing, { marginTop: 16 }]}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{user?.nombre?.charAt(0) || 'U'}</Text>
             </View>

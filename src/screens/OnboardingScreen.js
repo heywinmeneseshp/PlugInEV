@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import GradientButton from '../components/GradientButton';
+import PluginLogo from '../components/PluginLogo';
 import { colors, radius, weights } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -64,10 +65,7 @@ export default function OnboardingScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Logo */}
       <View style={styles.logoRow}>
-        <View style={styles.logoIcon}>
-          <Ionicons name="flash" size={20} color={colors.green} />
-        </View>
-        <Text style={styles.logoText}>plügin</Text>
+        <PluginLogo variant="wordmark" size={0.45} />
       </View>
 
       {/* Skip */}

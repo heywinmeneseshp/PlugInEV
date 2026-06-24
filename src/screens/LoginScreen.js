@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import GradientButton from '../components/GradientButton';
+import PluginLogo from '../components/PluginLogo';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -46,10 +47,7 @@ export default function LoginScreen() {
 
       {/* Logo */}
       <View style={styles.logoSection}>
-        <View style={styles.logoIcon}>
-          <Ionicons name="flash" size={32} color={colors.green} />
-        </View>
-        <Text style={styles.logoTitle}>plügin</Text>
+        <PluginLogo variant="wordmark" size={0.6} />
         <Text style={styles.logoSub}>Carga inteligente para tu EV</Text>
       </View>
 

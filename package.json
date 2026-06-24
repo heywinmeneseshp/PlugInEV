@@ -19,6 +19,7 @@
     "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.4.0",
+    "react-native-svg": "15.12.1",
     "react-native-web": "^0.21.2"
   },
   "scripts": {
