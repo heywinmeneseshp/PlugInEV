@@ -7,6 +7,9 @@ import AnfitrionStack from './AnfitrionStack';
 import ReservationScreen from '../screens/ReservationScreen';
 import ChargingSessionScreen from '../screens/ChargingSessionScreen';
 import CDRScreen from '../screens/CDRScreen';
+import StationDetailScreen from '../screens/StationDetailScreen';
+import BookingScreen from '../screens/BookingScreen';
+import BookingConfirmationScreen from '../screens/BookingConfirmationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +38,13 @@ function MainScreens() {
         name="CDR"
         component={CDRScreen}
         options={{ animation: 'slide_from_bottom' }}
+      />
+      <Stack.Screen name="StationDetail" component={StationDetailScreen} />
+      <Stack.Screen name="Booking"       component={BookingScreen} />
+      <Stack.Screen
+        name="BookingConfirmation"
+        component={BookingConfirmationScreen}
+        options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
       />
     </Stack.Navigator>
   );

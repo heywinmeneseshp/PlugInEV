@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import GradientButton from './GradientButton';
 import { colors, fonts, weights } from '../styles/theme';
 import { formatCOP } from '../utils/format';
@@ -11,7 +12,12 @@ export default function StationBottomSheet({
   onReserve,
   userRole = 'conductor',
 }) {
+  const navigation = useNavigation();
   if (!station || !visible) return null;
+
+  const handleViewDetail = () => {
+    navigation.navigate('StationDetail', { station });
+  };
 
   const isFree = station.pricePerKWh === 0;
   const markerColor = !station.available
@@ -62,18 +68,11 @@ export default function StationBottomSheet({
 
           {userRole === 'conductor' && (
             <GradientButton
-              label={station.available ? 'Reservar' : 'No disponible'}
-              onPress={() => station.available && onReserve(station)}
-              disabled={!station.available}
+              label="Ver detalles"
+              onPress={handleViewDetail}
               height={52}
               style={{ width: 120 }}
-              icon={
-                <Ionicons
-                  name={station.available ? 'flash' : 'ban-outline'}
-                  size={15}
-                  color={station.available ? '#050A15' : colors.textMuted}
-                />
-              }
+              icon={<Ionicons name="arrow-forward" size={15} color="#050A15" />}
             />
           )}
         </View>
