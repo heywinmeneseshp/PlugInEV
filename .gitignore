@@ -44,3 +44,6 @@ yarn-error.*
 # agentes
 CLAUDE.md
 AGENTS.md
+
+# worktrees temporales de agentes
+.claude/worktrees/
