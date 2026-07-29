@@ -33,7 +33,7 @@ const ROLES = [
 export default function RolSelectionScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { selectRole, finishRegistration } = useAuth();
+  const { switchRole, finishRegistration } = useAuth();
   const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(false);
   const scaleAnims = useRef(ROLES.map(() => new Animated.Value(1))).current;
@@ -45,14 +45,10 @@ export default function RolSelectionScreen() {
     if (!selectedRole) return;
     setLoading(true);
     try {
-      await selectRole(selectedRole);
-      const mockUser = {
-        id: Date.now().toString(),
-        nombre: 'Usuario',
-        email: 'usuario@example.com',
-        role: selectedRole,
-      };
-      finishRegistration(mockUser, 'mock-token-final');
+      if (selectedRole === 'anfitrion') {
+        await switchRole('anfitrion');
+      }
+      finishRegistration();
     } catch {
     } finally {
       setLoading(false);

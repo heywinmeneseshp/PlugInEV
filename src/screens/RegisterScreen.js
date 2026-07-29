@@ -36,6 +36,12 @@ export default function RegisterScreen() {
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
+  const parsePhone = (phone) => {
+    const digits = phone.replace(/[^\d]/g, '');
+    if (digits.length > 10) return { code: `+${digits.slice(0, digits.length - 10)}`, number: digits.slice(-10) };
+    return { code: '+57', number: digits };
+  };
+
   const handleSubmit = async () => {
     if (!nombre || !apellido || !correo || !celular || !modeloCarro || !connector || !password || !confirmPassword) {
       Alert.alert('Campos requeridos', 'Completa todos los campos');
@@ -55,7 +61,21 @@ export default function RegisterScreen() {
     }
     setLoading(true);
     try {
-      await register({ nombre, apellido, correo, celular, modeloCarro, connector, password });
+      const phone = parsePhone(celular);
+      const payload = {
+        email: correo,
+        password,
+        name: `${nombre} ${apellido}`.trim(),
+        profile_type: 'natural_person',
+        phone_country_code: phone.code,
+        phone_number: phone.number,
+        vehicle: {
+          brand_id: '00000000-0000-0000-0000-000000000000',
+          model: modeloCarro,
+          connector_id: null,
+        },
+      };
+      await register(payload);
       navigation.navigate('OTP', { email: correo });
     } catch {
     } finally {

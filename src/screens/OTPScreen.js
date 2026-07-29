@@ -68,7 +68,7 @@ export default function OTPScreen() {
     if (code.length !== OTP_LENGTH) return;
     setLoading(true);
     try {
-      await verifyOTP(code);
+      await verifyOTP(email, code);
       navigation.navigate('RolSelection');
     } catch {
     } finally {

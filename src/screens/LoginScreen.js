@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Alert,
   StyleSheet,
   Dimensions,
 } from 'react-native';
@@ -34,7 +35,7 @@ export default function LoginScreen() {
     if (!email || !password) return;
     setLoading(true);
     try { await login(email, password); }
-    catch { setLoading(false); }
+    catch (e) { setLoading(false); Alert.alert('Error', e.message || 'No se pudo conectar con el servidor'); }
   };
 
   return (

@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
+import { iniciarSesion, registrar, verificarEmail, switchMode as switchModeApi } from '../services/api/auth';
+import { setToken } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -12,8 +14,10 @@ const initialState = {
 
 function authReducer(state, action) {
   switch (action.type) {
-    case 'LOGIN_START':
+    case 'START':
       return { ...state, isLoading: true };
+    case 'REGISTER_SUCCESS':
+      return { ...state, isLoading: false };
     case 'LOGIN_SUCCESS':
       return {
         ...state,
@@ -25,7 +29,7 @@ function authReducer(state, action) {
     case 'LOGIN_FAILURE':
       return { ...state, isLoading: false };
     case 'SET_USER':
-      return { ...state, user: { ...state.user, ...action.payload } };
+      return { ...state, user: { ...(state.user || {}), ...action.payload } };
     case 'SET_HOST_STATION':
       return { ...state, hostStation: action.payload };
     case 'UPDATE_WALLET':
@@ -42,52 +46,69 @@ function authReducer(state, action) {
 
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const registerTokenRef = useRef(null);
 
   const login = useCallback(async (email, password) => {
-    dispatch({ type: 'LOGIN_START' });
-    // Mock: acepta cualquier email con contraseña de 6+ caracteres
-    await new Promise((r) => setTimeout(r, 500));
+    dispatch({ type: 'START' });
+    try {
+      const data = await iniciarSesion(email, password);
+      setToken(data.access_token);
+      const role = data.active_mode === 'host' ? 'anfitrion' : 'conductor';
+      dispatch({
+        type: 'LOGIN_SUCCESS',
+        payload: {
+          user: { email, role, activeMode: data.active_mode },
+          token: data.access_token,
+        },
+      });
+    } catch (err) {
+      dispatch({ type: 'LOGIN_FAILURE' });
+      throw err;
+    }
+  }, []);
+
+  const register = useCallback(async (formData) => {
+    dispatch({ type: 'START' });
+    try {
+      const data = await registrar(formData);
+      setToken(data.access_token);
+      registerTokenRef.current = { token: data.access_token, refreshToken: data.refresh_token };
+      dispatch({ type: 'REGISTER_SUCCESS' });
+      return data;
+    } catch (err) {
+      dispatch({ type: 'LOGIN_FAILURE' });
+      throw err;
+    }
+  }, []);
+
+  const verifyOTP = useCallback(async (email, code) => {
+    const data = await verificarEmail(email, code);
+    const role = data.roles?.includes('host') ? 'anfitrion' : 'conductor';
+    dispatch({
+      type: 'SET_USER',
+      payload: { ...data, role, email_verified: true },
+    });
+    return data;
+  }, []);
+
+  const finishRegistration = useCallback(() => {
+    const tk = registerTokenRef.current;
     dispatch({
       type: 'LOGIN_SUCCESS',
       payload: {
-        user: {
-          id: '1',
-          nombre: 'Heywin',
-          email,
-          role: 'conductor',
-          vehiculo: 'Tesla Model 3',
-          placa: 'ABC-123',
-          metodoPago: 'Visa •••• 4242',
-          reservasActivas: 1,
-          walletBalance: 25000,
-        },
-        token: 'mock-token',
+        user: state.user,
+        token: tk?.token || null,
       },
     });
-  }, []);
+    registerTokenRef.current = null;
+  }, [state.user]);
 
-  const register = useCallback(async (_data) => {
-    dispatch({ type: 'LOGIN_START' });
-    await new Promise((r) => setTimeout(r, 300));
-    dispatch({ type: 'LOGIN_FAILURE' });
-    return { success: true };
-  }, []);
-
-  const verifyOTP = useCallback(async (_otp) => {
-    await new Promise((r) => setTimeout(r, 300));
-    return { success: true };
-  }, []);
-
-  const selectRole = useCallback(async (role) => {
-    await new Promise((r) => setTimeout(r, 200));
-    dispatch({ type: 'SET_USER', payload: { role } });
-  }, []);
-
-  const finishRegistration = useCallback((userData, token) => {
-    dispatch({
-      type: 'LOGIN_SUCCESS',
-      payload: { user: userData, token },
-    });
+  const switchRole = useCallback(async (role) => {
+    const mode = role === 'anfitrion' ? 'host' : 'driver';
+    const data = await switchModeApi(mode);
+    const userRole = data.active_mode === 'host' ? 'anfitrion' : 'conductor';
+    dispatch({ type: 'SET_USER', payload: { role: userRole, activeMode: data.active_mode } });
+    return data;
   }, []);
 
   const setHostStation = useCallback((station) => {
@@ -98,11 +119,9 @@ export function AuthProvider({ children }) {
     dispatch({ type: 'UPDATE_WALLET', payload: amount });
   }, []);
 
-  const switchRole = useCallback((role) => {
-    dispatch({ type: 'SET_USER', payload: { role } });
-  }, []);
-
   const logout = useCallback(() => {
+    setToken(null);
+    registerTokenRef.current = null;
     dispatch({ type: 'LOGOUT' });
   }, []);
 
@@ -111,11 +130,10 @@ export function AuthProvider({ children }) {
     login,
     register,
     verifyOTP,
-    selectRole,
     finishRegistration,
+    switchRole,
     setHostStation,
     updateWallet,
-    switchRole,
     logout,
   };
 

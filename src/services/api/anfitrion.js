@@ -10,23 +10,22 @@ export const actualizarEstacion = async (id, data) => {
   return response.data;
 };
 
-
 export const obtenerDashboard = async () => {
   const response = await api.get(endPoints.anfitrion.dashboard);
   return response.data;
 };
 
 export const toggleOnline = async (stationId, online) => {
-  const response = await api.patch(`/anfitrion/estaciones/${stationId}`, { online });
+  const response = await api.patch(endPoints.anfitrion.actualizarEstacion(stationId), { online });
   return response.data;
 };
 
 export const obtenerEstadisticas = async () => {
-  const response = await api.get('/anfitrion/estadisticas');
+  const response = await api.get(endPoints.anfitrion.estadisticas);
   return response.data;
 };
 
 export const obtenerReservasPendientes = async () => {
-  const response = await api.get('/anfitrion/reservas-pendientes');
+  const response = await api.get(endPoints.anfitrion.reservasPendientes);
   return response.data;
 };
