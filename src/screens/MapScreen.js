@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import mockStations from '../data/mockData';
+import { listarEstaciones } from '../services/api/estaciones';
 import { formatCOP } from '../utils/format';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -58,14 +58,45 @@ export default function MapScreen() {
 
   const walletBalance = user?.walletBalance || 0;
 
+  const [stations, setStations] = useState([]);
+
+  useEffect(() => {
+    listarEstaciones()
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map(s => ({
+            id: s._id || s.id,
+            name: s.name,
+            address: s.address,
+            latitude: s.latitude,
+            longitude: s.longitude,
+            available: s.online !== false,
+            pricePerKWh: s.price_per_kwh || 0,
+            power: s.power || '—',
+            connectors: s.connectors || [],
+            rating: s.rating || 0,
+            numRatings: s.num_ratings || 0,
+            hostName: s.host_name || '',
+            hostVerified: false,
+            hostSessions: s.sessions_count || 0,
+            accessInfo: s.access_info || '',
+            hours: s.hours || { open: '00:00', close: '23:59', days: 'Todos los días' },
+            reviews: [],
+          }));
+          setStations(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const filteredStations = useCallback(() => {
-    return mockStations.filter((s) => {
+    return stations.filter((s) => {
       if (activeFilter === 'free') return s.pricePerKWh === 0;
       if (activeFilter === 'paid') return s.pricePerKWh > 0;
       if (activeFilter === 'available') return s.available;
       return true;
     });
-  }, [activeFilter]);
+  }, [activeFilter, stations]);
 
   const handleReserve = useCallback((station) => {
     setSheetVisible(false);

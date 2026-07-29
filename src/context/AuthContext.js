@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
 import { iniciarSesion, registrar, verificarEmail, switchMode as switchModeApi } from '../services/api/auth';
 import { setToken } from '../services/api';
+import { obtenerPerfil } from '../services/api/perfil';
 
 const AuthContext = createContext(null);
 
@@ -61,6 +62,15 @@ export function AuthProvider({ children }) {
           token: data.access_token,
         },
       });
+      obtenerPerfil().then(perfil => {
+        if (perfil) {
+          dispatch({ type: 'SET_USER', payload: {
+            name: perfil.name,
+            phone: perfil.phone_number,
+            walletBalance: perfil.wallet_balance || 0,
+          }});
+        }
+      }).catch(() => {});
     } catch (err) {
       dispatch({ type: 'LOGIN_FAILURE' });
       throw err;
@@ -111,6 +121,10 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const setRole = useCallback((role) => {
+    dispatch({ type: 'SET_USER', payload: { role } });
+  }, []);
+
   const setHostStation = useCallback((station) => {
     dispatch({ type: 'SET_HOST_STATION', payload: station });
   }, []);
@@ -132,6 +146,7 @@ export function AuthProvider({ children }) {
     verifyOTP,
     finishRegistration,
     switchRole,
+    setRole,
     setHostStation,
     updateWallet,
     logout,

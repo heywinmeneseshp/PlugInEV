@@ -70,7 +70,7 @@ export default function RegisterScreen() {
         phone_country_code: phone.code,
         phone_number: phone.number,
         vehicle: {
-          brand_id: '00000000-0000-0000-0000-000000000000',
+          brand_id: null,
           model: modeloCarro,
           connector_id: null,
         },

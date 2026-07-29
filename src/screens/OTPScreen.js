@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { reenviarOTP } from '../services/api/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GradientButton from '../components/GradientButton';
 import { colors, fonts, weights, radius } from '../styles/theme';
@@ -56,7 +57,10 @@ export default function OTPScreen() {
     }
   }, [otp]);
 
-  const handleResend = () => {
+  const handleResend = async () => {
+    try {
+      await reenviarOTP(email, 'email_verification');
+    } catch {}
     setTimer(RESEND_DELAY);
     setCanResend(false);
     setOtp(Array(OTP_LENGTH).fill(''));

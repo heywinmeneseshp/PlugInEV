@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, Image, TouchableOpacity,
-  ScrollView, StyleSheet, Dimensions,
+  ScrollView, StyleSheet, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { obtenerPerfil } from '../services/api/perfil';
 import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 
@@ -19,14 +20,25 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const { user, logout, switchRole } = useAuth();
 
-  const initials = user?.nombre ? user.nombre.slice(0, 2).toUpperCase() : 'HE';
-  const role     = user?.role || 'conductor';
+  const [profile, setProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    obtenerPerfil()
+      .then(data => setProfile(data))
+      .catch(() => {})
+      .finally(() => setLoadingProfile(false));
+  }, []);
+
+  const displayName = profile?.name || user?.name || 'Usuario';
+  const initials    = displayName.slice(0, 2).toUpperCase();
+  const role        = user?.role || 'conductor';
 
   const INFO_ROWS = [
-    { icon: 'car-outline',      label: 'Vehículo',         value: user?.vehiculo    || 'Tesla Model 3' },
-    { icon: 'document-outline', label: 'Placa',            value: user?.placa       || 'ABC-123' },
-    { icon: 'card-outline',     label: 'Método de pago',   value: user?.metodoPago  || 'Visa •••• 4242' },
-    { icon: 'calendar-outline', label: 'Reservas activas', value: String(user?.reservasActivas ?? 1) },
+    { icon: 'car-outline',      label: 'Vehículo',         value: profile?.driver_profile?.vehicle_model || '—' },
+    { icon: 'call-outline',     label: 'Teléfono',         value: profile?.phone_number || '—' },
+    { icon: 'wallet-outline',   label: 'Saldo',            value: profile?.wallet_balance != null ? `$${profile.wallet_balance.toLocaleString('es-CO')}` : '—' },
+    { icon: 'calendar-outline', label: 'Reservas activas', value: String(user?.reservasActivas ?? 0) },
   ];
 
   return (
@@ -52,8 +64,12 @@ export default function ProfileScreen() {
             </View>
           </LinearGradient>
 
-          <Text style={s.name}>{user?.nombre || 'Heywin'}</Text>
-          <Text style={s.email}>{user?.email || 'heywin@correo.com'}</Text>
+          {loadingProfile ? (
+            <ActivityIndicator color="#00BAFF" style={{ marginBottom: 4 }} />
+          ) : (
+            <Text style={s.name}>{displayName}</Text>
+          )}
+          <Text style={s.email}>{user?.email || ''}</Text>
 
           {/* Badge de rol con gradiente */}
           <LinearGradient

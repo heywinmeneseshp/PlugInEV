@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { formatCOP } from '../utils/format';
+import { iniciarCarga, detenerCarga, obtenerTelemetria } from '../services/api/reservas';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, weights, radius } from '../styles/theme';
 
@@ -201,11 +202,38 @@ export default function ChargingSessionScreen() {
     }
   }, [phase, pulseAnim]);
 
+  // API: iniciar carga y poll de telemetría
+  useEffect(() => {
+    if (!reservationId) return;
+    iniciarCarga(reservationId).catch(() => {});
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await obtenerTelemetria(reservationId);
+        if (data && data.length > 0) {
+          const last = data[data.length - 1];
+          if (last.power_kw) setTelemetry(prev => ({ ...prev, power: last.power_kw }));
+          if (last.kwh_delivered) setTelemetry(prev => ({ ...prev, energy: last.kwh_delivered }));
+        }
+      } catch {}
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [reservationId]);
+
   const handleStop = () => {
     clearPhaseTimers();
     clearTick();
     setPhase('detenido');
-    setTimeout(() => navigation.navigate('CDR', { station, telemetry, reservationId }), 800);
+    detenerCarga(reservationId).catch(() => {});
+    setTimeout(() => navigation.navigate('CDR', {
+      station,
+      telemetry,
+      reservationId,
+      energy: telemetry.energy,
+      cost: telemetry.cost,
+      duration: telemetry.duration,
+    }), 800);
   };
 
   const formatDuration = (sec) => {

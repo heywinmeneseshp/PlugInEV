@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,21 +9,51 @@ import {
   Platform,
 } from 'react-native';
 import styles from '../styles/SearchScreenStyles';
-import mockStations from '../data/mockData';
+import { listarEstaciones } from '../services/api/estaciones';
 import { formatCOP } from '../utils/format';
 
 export default function SearchScreen({ onBack, onSelectStation, onGetDirections }) {
   const [query, setQuery] = useState('');
+  const [stations, setStations] = useState([]);
+
+  useEffect(() => {
+    listarEstaciones()
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map(s => ({
+            id: s._id || s.id,
+            name: s.name,
+            address: s.address,
+            latitude: s.latitude,
+            longitude: s.longitude,
+            available: s.online !== false,
+            pricePerKWh: s.price_per_kwh || 0,
+            power: s.power || '—',
+            connectors: s.connectors || [],
+            rating: s.rating || 0,
+            numRatings: s.num_ratings || 0,
+            hostName: s.host_name || '',
+            hostVerified: false,
+            hostSessions: s.sessions_count || 0,
+            accessInfo: s.access_info || '',
+            hours: s.hours || { open: '00:00', close: '23:59', days: 'Todos los días' },
+            reviews: [],
+          }));
+          setStations(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const results = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.toLowerCase();
-    return mockStations.filter(
+    return stations.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
         s.address.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, stations]);
 
   return (
     <View style={styles.container}>

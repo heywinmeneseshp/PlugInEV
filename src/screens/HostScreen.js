@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, Switch,
   TouchableOpacity, StyleSheet, Dimensions,
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { toggleOnline as toggleOnlineAPI, obtenerDashboard } from '../services/api/anfitrion';
 import { formatCOP } from '../utils/format';
 import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
@@ -22,20 +23,39 @@ export default function HostScreen() {
   const station = hostStation;
   const [online, setOnline] = useState(station?.available ?? true);
 
-  const stats = useMemo(() => {
-    if (!station) return null;
-    const p = station.pricePerKWh || 800;
-    const chargesToday = 8;
-    const chargesWeek  = 47;
-    const kwhToday     = 124;
-    const kwhWeek      = 680;
-    return {
-      chargesToday, chargesWeek,
-      earningsToday: chargesToday * p * 2.5,
-      earningsWeek:  chargesWeek  * p * 2.3,
-      kwhToday, kwhWeek,
-    };
+  const [stats, setStats] = useState({
+    chargesToday: 0, chargesWeek: 0,
+    earningsToday: 0, earningsWeek: 0,
+    kwhToday: 0, kwhWeek: 0,
+  });
+
+  useEffect(() => {
+    if (!station) return;
+    obtenerDashboard()
+      .then(data => {
+        if (data) {
+          const p = station.pricePerKWh || 800;
+          setStats({
+            chargesToday: data.sessions_today || 0,
+            chargesWeek: data.total_sessions || 0,
+            kwhToday: data.kwh_today || 0,
+            kwhWeek: data.total_kwh || 0,
+            earningsToday: (data.sessions_today || 0) * p * 2.5,
+            earningsWeek: (data.total_sessions || 0) * p * 2.3,
+          });
+        }
+      })
+      .catch(() => {});
   }, [station]);
+
+  const handleToggleOnline = async (value) => {
+    setOnline(value);
+    try {
+      await toggleOnlineAPI(station?.id || station?._id, value);
+    } catch {
+      setOnline(!value);
+    }
+  };
 
   const barHeights = useMemo(() =>
     DAYS.map(() => Math.floor(Math.random() * 60 + 20)), []);
@@ -104,7 +124,7 @@ export default function HostScreen() {
               </Text>
               <Switch
                 value={online}
-                onValueChange={setOnline}
+                onValueChange={handleToggleOnline}
                 trackColor={{ false: colors.trackBg, true: 'rgba(0,186,255,0.4)' }}
                 thumbColor={online ? colors.cyan : colors.textMuted}
                 ios_backgroundColor={colors.trackBg}

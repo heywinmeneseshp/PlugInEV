@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
-  Alert,
   StyleSheet,
   Dimensions,
 } from 'react-native';
@@ -30,12 +29,28 @@ export default function LoginScreen() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+
+  const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
   const handleLogin = async () => {
-    if (!email || !password) return;
+    setError('');
+    if (!email || !password) {
+      setError('Ingresa tu correo y contraseña');
+      return;
+    }
+    if (!validateEmail(email)) {
+      setError('Ingresa un correo válido');
+      return;
+    }
     setLoading(true);
-    try { await login(email, password); }
-    catch (e) { setLoading(false); Alert.alert('Error', e.message || 'No se pudo conectar con el servidor'); }
+    try {
+      await login(email, password);
+    } catch (err) {
+      setError(err.message || 'Credenciales inválidas');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -100,6 +115,10 @@ export default function LoginScreen() {
               onSubmitEditing={handleLogin}
             />
           </View>
+
+          {!!error && (
+            <Text style={styles.errorText}>{error}</Text>
+          )}
 
           <GradientButton
             label={loading ? 'Ingresando...' : 'Entrar'}
@@ -231,5 +250,11 @@ const styles = StyleSheet.create({
   registerAccent: {
     color: colors.cyan,
     fontWeight: weights.semibold,
+  },
+  errorText: {
+    fontSize: 13,
+    color: colors.red,
+    marginBottom: 8,
+    textAlign: 'center',
   },
 });

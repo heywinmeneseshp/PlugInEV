@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { formatCOP } from '../utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import GradientButton from '../components/GradientButton';
+import { guardarCDR } from '../services/api/reservas';
 import { colors, weights, radius } from '../styles/theme';
 
 function formatDateTime() {
@@ -68,14 +69,24 @@ export default function CDRScreen() {
 
   const invoiceId = `#INV-${String(Math.floor(Math.random() * 99999)).padStart(5, '0')}`;
 
+  useEffect(() => {
+    if (!reservationId) return;
+    guardarCDR({
+      reservation_id: reservationId,
+      kwh_delivered: route.params?.energy || telemetry?.energy || 0,
+      cost: route.params?.cost || telemetry?.cost || 0,
+      duration_minutes: Math.round((route.params?.duration || telemetry?.duration || 0) / 60),
+    }).catch(() => {});
+  }, [reservationId]);
+
   const goToMap = () => navigation.navigate('ConductorHome', { screen: 'Mapa' });
 
   const handleFinish = () => {
-    if (rating === 0) {
-      Alert.alert('Califica la sesión', 'Por favor califica tu experiencia para continuar.');
-      return;
+    if (rating > 0) {
+      console.log('[CDR] Rating seleccionado:', rating, 'para reserva:', reservationId);
+      // TODO: POST /v1/reservas/:id/rating cuando esté disponible
     }
-    goToMap();
+    navigation.navigate('ConductorHome');
   };
 
   return (

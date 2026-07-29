@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, StyleSheet, Dimensions, Alert, KeyboardAvoidingView, Platform,
+  ScrollView, StyleSheet, Dimensions, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { registrarEstacion } from '../services/api/anfitrion';
 import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 
@@ -35,6 +36,7 @@ export default function HostSetupScreen() {
   const [power, setPower]           = useState('');
   const [connectors, setConnectors] = useState([]);
   const [payment, setPayment]       = useState('');
+  const [loading, setLoading]       = useState(false);
 
   const toggleConnector = (c) =>
     setConnectors((p) => p.includes(c) ? p.filter((x) => x !== c) : [...p, c]);
@@ -46,22 +48,33 @@ export default function HostSetupScreen() {
     return false;
   };
 
-  const handleFinish = () => {
-    const station = {
-      id: `host-${Date.now()}`,
-      name: name.trim(),
-      address: address.trim(),
-      pricePerKWh: parseInt(price, 10) || 0,
-      power,
-      connectors,
-      paymentMethod: PAGOS.find((p) => p.id === payment)?.label || payment,
-      available: true,
-      latitude: 10.995,
-      longitude: -74.80,
-      rating: 0,
-    };
-    setHostStation(station);
-    navigation.navigate('AnfitrionTabs');
+  const handleFinish = async () => {
+    setLoading(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        address: address.trim(),
+        latitude: 10.995,
+        longitude: -74.80,
+        power: power,
+        price_per_kwh: parseInt(price, 10) || 0,
+        connectors: connectors,
+        access_info: '',
+      };
+      const station = await registrarEstacion(payload);
+      setHostStation({
+        ...payload,
+        id: station._id || station.id,
+        pricePerKWh: payload.price_per_kwh,
+        paymentMethod: PAGOS.find((p) => p.id === payment)?.label || payment,
+        available: true,
+      });
+      navigation.navigate('AnfitrionTabs');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'No se pudo registrar la estación');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNext = () => {
@@ -239,7 +252,7 @@ export default function HostSetupScreen() {
         <GradientButton
           label={step < STEPS.length - 1 ? 'Siguiente' : 'Registrar estación'}
           onPress={handleNext}
-          disabled={!canNext()}
+          disabled={!canNext() || loading}
           icon={
             <Ionicons
               name={step < STEPS.length - 1 ? 'arrow-forward' : 'flash'}

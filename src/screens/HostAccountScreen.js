@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform,
@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GradientButton from '../components/GradientButton';
+import { obtenerEstadisticas } from '../services/api/anfitrion';
 import { colors, weights, radius } from '../styles/theme';
 
 const BANKS = [
@@ -18,12 +19,6 @@ const BANKS = [
 
 const ACCOUNT_TYPES = ['Ahorros', 'Corriente'];
 
-const MOCK_SUMMARY = {
-  totalEarned:   364800,
-  pendingPayout: 95250,
-  nextPayout:    'Lun 24 Jun',
-  sessions:      47,
-};
 
 export default function HostAccountScreen() {
   const insets = useSafeAreaInsets();
@@ -33,13 +28,34 @@ export default function HostAccountScreen() {
   const [accountNum, setAccountNum]   = useState('');
   const [accountName, setAccountName] = useState('');
   const [saved, setSaved]             = useState(false);
+  const [stats, setStats] = useState({
+    totalEarned: 0,
+    pendingPayout: 0,
+    sessions: 0,
+    nextPayout: 'Por definir',
+  });
+
+  useEffect(() => {
+    obtenerEstadisticas()
+      .then(data => {
+        if (data) setStats({
+          totalEarned: data.total_earned || 0,
+          pendingPayout: data.pending_payout || 0,
+          sessions: data.total_sessions || 0,
+          nextPayout: data.next_payout || 'Por definir',
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSave = () => {
     if (!accountNum.trim() || !accountName.trim()) {
       Alert.alert('Campos requeridos', 'Completa el número y titular de la cuenta.');
       return;
     }
+    // TODO: cuando el backend tenga endpoint de pago, conectar aquí
     setSaved(true);
+    Alert.alert('Guardado', 'Los datos de pago serán procesados próximamente.');
     setTimeout(() => setSaved(false), 3000);
   };
 
@@ -59,11 +75,11 @@ export default function HostAccountScreen() {
           <View style={s.summaryTop}>
             <View>
               <Text style={s.summaryMeta}>Ganancias totales</Text>
-              <Text style={s.summaryTotal}>${MOCK_SUMMARY.totalEarned.toLocaleString('es-CO')}</Text>
+              <Text style={s.summaryTotal}>${stats.totalEarned.toLocaleString('es-CO')}</Text>
             </View>
             <View style={s.summaryBadge}>
               <Ionicons name="flash" size={14} color="#050A15" />
-              <Text style={s.summaryBadgeText}>{MOCK_SUMMARY.sessions} sesiones</Text>
+              <Text style={s.summaryBadgeText}>{stats.sessions} sesiones</Text>
             </View>
           </View>
 
@@ -72,11 +88,11 @@ export default function HostAccountScreen() {
           <View style={s.summaryRow}>
             <View>
               <Text style={s.summaryMeta}>Pendiente de pago</Text>
-              <Text style={s.summaryPending}>${MOCK_SUMMARY.pendingPayout.toLocaleString('es-CO')}</Text>
+              <Text style={s.summaryPending}>${stats.pendingPayout.toLocaleString('es-CO')}</Text>
             </View>
             <View>
               <Text style={s.summaryMeta}>Próximo pago</Text>
-              <Text style={s.summaryDate}>{MOCK_SUMMARY.nextPayout}</Text>
+              <Text style={s.summaryDate}>{stats.nextPayout}</Text>
             </View>
           </View>
         </LinearGradient>

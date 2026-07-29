@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import RatingModal from '../components/RatingModal';
 import { formatCOP } from '../utils/format';
 import { colors, weights, radius } from '../styles/theme';
+import { listarReservas } from '../services/api/reservas';
 
 const TABS = ['Activas', 'Historial'];
 
@@ -57,13 +58,38 @@ export default function ReservationsScreen() {
   const insets     = useSafeAreaInsets();
   const navigation = useNavigation();
 
-  const [activeTab, setActiveTab]   = useState('Activas');
-  const [ratingRes, setRatingRes]   = useState(null);
-  const [rated, setRated]           = useState({});
+  const [activeTab, setActiveTab]     = useState('Activas');
+  const [ratingRes, setRatingRes]     = useState(null);
+  const [rated, setRated]             = useState({});
+  const [allReservations, setAllReservations] = useState([]);
+  const [loading, setLoading]         = useState(true);
+
+  useEffect(() => {
+    listarReservas()
+      .then(data => {
+        const mapped = (Array.isArray(data) ? data : []).map(r => ({
+          id: r._id || r.id,
+          stationName: r.station_name || r.station?.name || 'Estación',
+          address: r.station_address || r.station?.address || '',
+          date: new Date(r.start_time || r.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit' }),
+          time: new Date(r.start_time || r.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+          duration: r.duration_minutes ? `${r.duration_minutes}min` : '—',
+          cost: r.cost || 0,
+          connector: r.connector_type || 'CCS',
+          kwh: r.kwh_delivered || 0,
+          status: r.status === 'active' ? 'active' : r.status === 'completed' ? 'completed' : r.status === 'cancelled' ? 'cancelled' : 'completed',
+          reservationId: r._id || r.id,
+          station: r.station,
+        }));
+        setAllReservations(mapped);
+      })
+      .catch(() => setAllReservations([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = activeTab === 'Activas'
-    ? MOCK_RESERVATIONS.filter((r) => r.status === 'active')
-    : MOCK_RESERVATIONS.filter((r) => r.status !== 'active');
+    ? allReservations.filter((r) => r.status === 'active')
+    : allReservations.filter((r) => r.status !== 'active');
 
   const handleRate = (res) => setRatingRes(res);
 
@@ -95,8 +121,12 @@ export default function ReservationsScreen() {
         })}
       </View>
 
+      {loading ? (
+        <ActivityIndicator color="#00BAFF" style={{ marginTop: 40 }} />
+      ) : null}
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-        {filtered.length === 0 ? (
+        {!loading && filtered.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="calendar-outline" size={42} color={colors.textMuted} style={{ marginBottom: 12 }} />
             <Text style={s.emptyTitle}>{activeTab === 'Activas' ? 'Sin reservas activas' : 'Sin historial'}</Text>
