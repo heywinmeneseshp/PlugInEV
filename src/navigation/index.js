@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import AuthStack from './AuthStack';
@@ -51,7 +52,15 @@ function MainScreens() {
 }
 
 export default function RootNavigator() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isReady } = useAuth();
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A1322', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#19D4FF" />
+      </View>
+    );
+  }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

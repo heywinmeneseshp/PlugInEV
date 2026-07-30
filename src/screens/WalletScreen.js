@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, Modal,
   StyleSheet, Alert,
@@ -29,9 +29,13 @@ const MOCK_TRANSACTIONS = [
 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
-  const { updateWallet } = useAuth();
+  const { user, updateWallet } = useAuth();
 
-  const [balance, setBalance]           = useState(25000);
+  const [balance, setBalance]           = useState(user?.walletBalance ?? 0);
+
+  useEffect(() => {
+    if (user?.walletBalance != null) setBalance(user.walletBalance);
+  }, [user?.walletBalance]);
   const [showRecharge, setShowRecharge] = useState(false);
   const [selectedAmount, setAmount]     = useState(null);
   const [selectedPay, setPay]           = useState('nequi');
@@ -141,7 +145,7 @@ export default function WalletScreen() {
           <TouchableOpacity style={s.modalBackdrop} activeOpacity={1} onPress={() => setShowRecharge(false)} />
           <View style={s.modalSheet}>
             <View style={s.modalHandle} />
-            <Text style={s.modalTitle}>Recargar saldo</Text>
+            <Text style={s.modalTitle}>Recargar cartera</Text>
 
             {/* Amount selector */}
             <Text style={s.modalLabel}>Monto</Text>
@@ -163,7 +167,7 @@ export default function WalletScreen() {
             </View>
 
             {/* Payment method */}
-            <Text style={s.modalLabel}>Pagar con</Text>
+            <Text style={s.modalLabel}>Método de recarga</Text>
             {PAYMENT_OPTIONS.map((pm) => {
               const active = selectedPay === pm.id;
               return (

@@ -156,37 +156,59 @@ const styles = StyleSheet.create({
   /* Markers */
   markerWrapper: { alignItems: 'center' },
   markerCard: {
-    backgroundColor: 'rgba(5,10,21,0.9)',
-    borderRadius: 8,
+    backgroundColor: '#111827',
+    borderRadius: 18,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderWidth: 1.5,
-    marginBottom: 4,
+    marginBottom: 1,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    elevation: 6,
   },
   markerCardText: {
-    fontSize: fonts.xs,
-    fontWeight: weights.bold,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  markerDotContainer: {
+  /* iOS: glow nativo con shadowColor dinámico */
+  markerDotIOS: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 4,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 7,
+  },
+
+  /* Android: glow simulado con capas concéntricas */
+  markerDotWrap: {
     width: 24,
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 0,
   },
-  markerBubble: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.35)',
-    zIndex: 1,
-  },
-  markerPulse: {
+  markerGlowOuter: {
     position: 'absolute',
     width: 24,
     height: 24,
     borderRadius: 12,
-    opacity: 0.2,
+    opacity: 0.12,
+  },
+  markerGlowMid: {
+    position: 'absolute',
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    opacity: 0.28,
+  },
+  markerDotCore: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });
 

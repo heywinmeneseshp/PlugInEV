@@ -57,8 +57,10 @@ export default function HostScreen() {
     }
   };
 
-  const barHeights = useMemo(() =>
-    DAYS.map(() => Math.floor(Math.random() * 60 + 20)), []);
+  const barHeights = useMemo(() => {
+    const baseValue = Math.max(stats.chargesWeek, 7);
+    return [0.4, 0.6, 0.5, 0.8, 0.7, 0.9, 1.0].map(f => Math.round(f * baseValue));
+  }, [stats.chargesWeek]);
 
   /* ── Sin estación ── */
   if (!station) {
@@ -208,7 +210,7 @@ export default function HostScreen() {
         <View style={s.chartCard}>
           <View style={s.barsWrap}>
             {DAYS.map((day, i) => {
-              const isToday = i === 3;
+              const isToday = i === 6;
               return (
                 <View key={day} style={s.barCol}>
                   <Text style={s.barCount}>{barHeights[i] > 50 ? Math.floor(barHeights[i]/8) : ''}</Text>

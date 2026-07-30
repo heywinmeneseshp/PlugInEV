@@ -9,7 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import RatingModal from '../components/RatingModal';
 import { formatCOP } from '../utils/format';
 import { colors, weights, radius } from '../styles/theme';
-import { listarReservas } from '../services/api/reservas';
+import { listarReservas, calificarReserva } from '../services/api/reservas';
 
 const TABS = ['Activas', 'Historial'];
 
@@ -95,6 +95,9 @@ export default function ReservationsScreen() {
 
   const handleSubmitRating = ({ rating, comment }) => {
     setRated((prev) => ({ ...prev, [ratingRes.id]: rating }));
+    if (ratingRes?.id || ratingRes?.reservationId) {
+      calificarReserva(ratingRes.id || ratingRes.reservationId, rating).catch(() => {});
+    }
   };
 
   return (

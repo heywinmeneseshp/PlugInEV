@@ -19,7 +19,7 @@ export default function HostMatchScreen() {
   const [confirmed, setConfirmed] = useState(false);
 
   const handleConfirm = () => setConfirmed(true);
-  const handleFinish  = () => navigation.goBack();
+  const handleFinish  = () => navigation.navigate('AnfitrionHome', { screen: 'HostReservas' });
 
   if (!res) return null;
 

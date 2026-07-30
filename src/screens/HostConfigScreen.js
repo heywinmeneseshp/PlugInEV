@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,30 +6,52 @@ import {
   ScrollView,
   Switch,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { formatCOP } from '../utils/format';
-
-const MOCK_STATIONS = [
-  { id: '1', name: 'ElectroCarga Norte', address: 'Cra. 65 #80-120', online: true, pricePerKWh: 825, power: '150kW' },
-  { id: '2', name: 'VoltStation Sur', address: 'Cl. 30 #20-15', online: false, pricePerKWh: 720, power: '100kW' },
-];
-
-const MOCK_PENDING = [
-  { id: 'r1', user: 'Carlos M.', date: 'Hoy', time: '16:00', duration: '1h' },
-  { id: 'r2', user: 'Ana G.', date: 'Mañana', time: '10:30', duration: '2h' },
-  { id: 'r3', user: 'Pedro R.', date: '25/06', time: '14:00', duration: '1.5h' },
-];
+import { obtenerDashboard } from '../services/api/anfitrion';
 
 export default function HostConfigScreen() {
   const navigation = useNavigation();
-  const [stations, setStations] = useState(MOCK_STATIONS);
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [stationToggles, setStationToggles] = useState({});
+
+  useEffect(() => {
+    obtenerDashboard()
+      .then(data => {
+        setDashboard(data);
+        // Initialize toggle state from station data
+        if (data?.stations) {
+          const toggles = {};
+          data.stations.forEach(s => {
+            toggles[s.id || s._id] = s.online ?? true;
+          });
+          setStationToggles(toggles);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const toggleOnline = (id) => {
-    setStations((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, online: !s.online } : s))
-    );
+    setStationToggles((prev) => ({ ...prev, [id]: !prev[id] }));
   };
+
+  const stations = dashboard?.stations || [];
+  const pendingReservations = dashboard?.recentReservations || [];
+  const totalSessions = dashboard?.totalSessions ?? 0;
+  const totalKwh = dashboard?.totalKwh ?? 0;
+  const onlineStations = dashboard?.onlineStations ?? 0;
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#00BAFF" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -47,46 +69,56 @@ export default function HostConfigScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.sectionTitle}>Tus estaciones</Text>
-        {stations.map((station) => (
-          <View key={station.id} style={styles.stationCard}>
-            <View style={styles.stationInfo}>
-              <Text style={styles.stationName}>{station.name}</Text>
-              <Text style={styles.stationAddress}>{station.address}</Text>
-              <View style={styles.tagRow}>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{formatCOP(station.pricePerKWh)}/kWh</Text>
+        {stations.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>Sin estaciones registradas</Text>
+          </View>
+        ) : (
+          stations.map((station) => {
+            const id = station.id || station._id;
+            const isOnline = stationToggles[id] ?? station.online ?? true;
+            return (
+              <View key={id} style={styles.stationCard}>
+                <View style={styles.stationInfo}>
+                  <Text style={styles.stationName}>{station.name}</Text>
+                  <Text style={styles.stationAddress}>{station.address}</Text>
+                  <View style={styles.tagRow}>
+                    <View style={styles.tag}>
+                      <Text style={styles.tagText}>{formatCOP(station.pricePerKWh || station.price_per_kwh || 0)}/kWh</Text>
+                    </View>
+                    <View style={styles.tag}>
+                      <Text style={styles.tagText}>{station.power}</Text>
+                    </View>
+                  </View>
                 </View>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{station.power}</Text>
+                <View style={styles.toggleCol}>
+                  <Text style={[styles.statusText, isOnline && styles.statusOnline]}>
+                    {isOnline ? 'Activo' : 'Inactivo'}
+                  </Text>
+                  <Switch
+                    value={isOnline}
+                    onValueChange={() => toggleOnline(id)}
+                    trackColor={{ false: '#334155', true: '#00E5FF' }}
+                    thumbColor={isOnline ? '#FFFFFF' : '#64748B'}
+                  />
                 </View>
               </View>
-            </View>
-            <View style={styles.toggleCol}>
-              <Text style={[styles.statusText, station.online && styles.statusOnline]}>
-                {station.online ? 'Activo' : 'Inactivo'}
-              </Text>
-              <Switch
-                value={station.online}
-                onValueChange={() => toggleOnline(station.id)}
-                trackColor={{ false: '#334155', true: '#00E5FF' }}
-                thumbColor={station.online ? '#FFFFFF' : '#64748B'}
-              />
-            </View>
-          </View>
-        ))}
+            );
+          })
+        )}
 
         <Text style={styles.sectionTitle}>Reservas pendientes</Text>
-        {MOCK_PENDING.length === 0 ? (
+        {pendingReservations.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>Sin reservas pendientes</Text>
           </View>
         ) : (
-          MOCK_PENDING.map((res) => (
-            <View key={res.id} style={styles.reservationCard}>
+          pendingReservations.map((res) => (
+            <View key={res.id || res._id} style={styles.reservationCard}>
               <View style={styles.resLeft}>
-                <Text style={styles.resUser}>{res.user}</Text>
+                <Text style={styles.resUser}>{res.user || res.driver_name || res.driver || 'Conductor'}</Text>
                 <Text style={styles.resDetail}>
-                  {res.date} · {res.time} · {res.duration}
+                  {res.date || res.scheduled_date || 'Hoy'} · {res.time || res.scheduled_time || '-'} · {res.duration || res.estimated_duration || '-'}
                 </Text>
               </View>
               <View style={styles.resBadge}>
@@ -99,18 +131,16 @@ export default function HostConfigScreen() {
         <Text style={styles.sectionTitle}>Estadísticas rápidas</Text>
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>18</Text>
-            <Text style={styles.statLabel}>Cargas hoy</Text>
+            <Text style={styles.statValue}>{totalSessions}</Text>
+            <Text style={styles.statLabel}>Sesiones</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {'\u2605'} 4.8
-            </Text>
-            <Text style={styles.statLabel}>Calificación</Text>
+            <Text style={styles.statValue}>{totalKwh} kWh</Text>
+            <Text style={styles.statLabel}>Energía total</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{formatCOP(36800)}</Text>
-            <Text style={styles.statLabel}>Ganancias hoy</Text>
+            <Text style={styles.statValue}>{onlineStations}</Text>
+            <Text style={styles.statLabel}>Estaciones online</Text>
           </View>
         </View>
       </ScrollView>
@@ -122,6 +152,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0B0F1A',
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',

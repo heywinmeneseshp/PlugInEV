@@ -55,20 +55,7 @@ export default function HostReservationsScreen() {
   const pendingCount = reservations.filter((r) => r.status === 'pending').length;
 
   const handleConfirmArrival = (res) => {
-    Alert.alert(
-      'Confirmar llegada',
-      `¿Confirmas que el conductor llegó a ${res.stationName}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            // TODO: llamar API de confirmación cuando esté disponible
-            Alert.alert('Llegada confirmada', 'El conductor fue notificado.');
-          },
-        },
-      ]
-    );
+    navigation.navigate('HostMatch', { reservation: res });
   };
 
   return (

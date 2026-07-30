@@ -34,3 +34,8 @@ export const guardarCDR = async (data) => {
   const response = await api.post(endPoints.reservas.cdr, data);
   return response.data;
 };
+
+export const calificarReserva = async (reservationId, rating, comment = '') => {
+  const response = await api.post(`/v1/reservas/${reservationId}/rating`, { rating, comment });
+  return response.data;
+};

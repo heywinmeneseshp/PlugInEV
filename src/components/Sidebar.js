@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, Image, StyleSheet, TouchableOpacity,
+  View, Text, Image, StyleSheet, TouchableOpacity, Alert, Modal,
   Animated, Dimensions, TouchableWithoutFeedback, Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,15 +42,22 @@ export default function Sidebar({ visible, onClose }) {
     ]).start();
   }, [visible]);
 
-  const handleNav = (screen) => {
+  const handleNav = (screen, label) => {
     onClose();
-    if (screen) setTimeout(() => navigation.navigate(screen), 250);
+    if (screen) {
+      setTimeout(() => navigation.navigate(screen), 250);
+    } else {
+      setTimeout(() => Alert.alert(label, 'Esta sección estará disponible próximamente.'), 250);
+    }
   };
 
   return (
-    <View
-      style={[StyleSheet.absoluteFill, { zIndex: 100, elevation: 100 }]}
-      pointerEvents={visible ? 'auto' : 'none'}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      statusBarTranslucent
     >
       <TouchableWithoutFeedback onPress={onClose}>
         <Animated.View style={[styles.overlay, { opacity: overlayAnim }]} />
@@ -74,11 +81,11 @@ export default function Sidebar({ visible, onClose }) {
             style={styles.avatarRing}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{user?.nombre?.charAt(0)?.toUpperCase() || 'U'}</Text>
+              <Text style={styles.avatarText}>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</Text>
             </View>
           </LinearGradient>
 
-          <Text style={styles.userName}>{user?.nombre || 'Usuario'}</Text>
+          <Text style={styles.userName}>{user?.name || 'Usuario'}</Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
           <View style={styles.verifiedBadge}>
             <Ionicons name="checkmark-circle" size={11} color={colors.green} />
@@ -133,7 +140,7 @@ export default function Sidebar({ visible, onClose }) {
               <TouchableOpacity
                 key={i}
                 style={[styles.menuRow, i < MENU_ITEMS.length - 1 && styles.menuDivider]}
-                onPress={() => handleNav(item.screen)}
+                onPress={() => handleNav(item.screen, item.label)}
                 activeOpacity={0.7}
               >
                 <Ionicons name={item.icon} size={18} color={colors.textSecondary} />
@@ -156,7 +163,7 @@ export default function Sidebar({ visible, onClose }) {
           <Text style={styles.logoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+    </Modal>
   );
 }
 

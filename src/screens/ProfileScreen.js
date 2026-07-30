@@ -107,7 +107,7 @@ export default function ProfileScreen() {
         {role === 'anfitrion' ? (
           <GradientButton
             label="Dashboard anfitrión"
-            onPress={() => navigation.navigate('AnfitrionStack')}
+            onPress={() => navigation.navigate('AnfitrionHome')}
             icon={<Ionicons name="grid-outline" size={16} color="#050A15" />}
             style={{ marginBottom: 28 }}
           />

@@ -4,7 +4,7 @@
     "slug": "PlugInEV",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0B0F1A",
     "ios": {
@@ -15,10 +15,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0B0F1A",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#0B0F1A"
       },
       "config": {
         "googleMaps": {
@@ -31,14 +29,20 @@
       ],
       "package": "com.anonymous.PlugInEV"
     },
-
     "plugins": [
       [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Necesitamos tu ubicación para encontrar estaciones de carga cercanas."
         }
-      ]
-    ]
+      ],
+      "expo-font",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c4cc30be-f874-47ff-9e16-08aef5f7646a"
+      }
+    }
   }
 }

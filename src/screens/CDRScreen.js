@@ -12,7 +12,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { formatCOP } from '../utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import GradientButton from '../components/GradientButton';
-import { guardarCDR } from '../services/api/reservas';
+import { guardarCDR, calificarReserva } from '../services/api/reservas';
 import { colors, weights, radius } from '../styles/theme';
 
 function formatDateTime() {
@@ -82,9 +82,9 @@ export default function CDRScreen() {
   const goToMap = () => navigation.navigate('ConductorHome', { screen: 'Mapa' });
 
   const handleFinish = () => {
-    if (rating > 0) {
-      console.log('[CDR] Rating seleccionado:', rating, 'para reserva:', reservationId);
-      // TODO: POST /v1/reservas/:id/rating cuando esté disponible
+    const resolvedId = route.params?.reservation?._id || route.params?.reservationId || reservationId;
+    if (rating > 0 && resolvedId) {
+      calificarReserva(resolvedId, rating).catch(() => {});
     }
     navigation.navigate('ConductorHome');
   };

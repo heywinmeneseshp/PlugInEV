@@ -18,7 +18,6 @@ import { formatCOP } from '../utils/format';
 
 const { width } = Dimensions.get('window');
 
-const VEHICLE_CAPACITY_KWH = 75; // Tesla Model 3
 const HOURS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
 
 function BatterySlider({ value, onChange, color, label }) {
@@ -58,16 +57,17 @@ export default function ReservationScreen() {
   const { station } = route.params;
   const { user, updateWallet } = useAuth();
 
-  const walletBalance = user?.walletBalance || 25000;
+  const walletBalance = user?.walletBalance || 0;
+  const batteryCapacity = user?.driverProfile?.battery_capacity_kwh || 0;
   const [selectedHour, setSelectedHour] = useState(null);
   const [batteryNow, setBatteryNow] = useState(25);
   const [batteryTarget, setBatteryTarget] = useState(80);
 
   const math = useMemo(() => {
     const needed = Math.max(0, batteryTarget - batteryNow);
-    const energyKWh = (needed / 100) * VEHICLE_CAPACITY_KWH;
-    const powerKW = parseFloat(station.power) || 50;
-    const timeHours = energyKWh / powerKW;
+    const energyKWh = batteryCapacity > 0 ? (needed / 100) * batteryCapacity : 0;
+    const powerKW = parseFloat(station.power) || 0;
+    const timeHours = powerKW > 0 ? energyKWh / powerKW : 0;
     const timeMin = Math.round(timeHours * 60);
     const totalCost = energyKWh * station.pricePerKWh;
     const canAfford = station.pricePerKWh === 0 || walletBalance >= totalCost;
@@ -110,30 +110,32 @@ export default function ReservationScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         {/* Station card */}
         <View style={s.stationCard}>
-          <View style={s.stationCardLeft}>
+          <View style={s.stationCardTop}>
             <View style={s.stationCardAvatar}>
-              <Text style={s.stationCardEmoji}>⚡</Text>
+              <Ionicons name="flash-outline" size={22} color={colors.cyan} />
             </View>
             <View style={s.stationCardInfo}>
               <Text style={s.stationName}>{station.name}</Text>
               <View style={s.ratingRow}>
-                <Text style={s.ratingText}>⭐ {station.rating}</Text>
-                <Text style={s.ratingCount}>(122)</Text>
-                <Text style={s.verifiedText}>✓ Anfitrión verificado</Text>
-              </View>
-              <View style={s.connectorRow}>
-                {station.connectors?.map((c, i) => (
-                  <View key={i} style={s.connectorTag}>
-                    <Text style={s.connectorTagText}>{c}</Text>
-                  </View>
-                ))}
-                <Text style={s.powerText}>{station.power}</Text>
+                <Ionicons name="star" size={12} color={colors.yellow} />
+                <Text style={s.ratingText}>{station.rating}</Text>
+                <Text style={s.ratingCount}>({station.numRatings || station.num_ratings || 0})</Text>
+                <Ionicons name="checkmark-circle" size={12} color={colors.green} />
+                <Text style={s.verifiedText}>Verificado</Text>
               </View>
             </View>
+            <Text style={s.stationPrice}>
+              {station.pricePerKWh === 0 ? 'Gratis' : `${formatCOP(station.pricePerKWh)}/kWh`}
+            </Text>
           </View>
-          <Text style={s.stationPrice}>
-            {station.pricePerKWh === 0 ? 'Gratis' : `${formatCOP(station.pricePerKWh)}/kWh`}
-          </Text>
+          <View style={s.connectorRow}>
+            {station.connectors?.map((c, i) => (
+              <View key={i} style={s.connectorTag}>
+                <Text style={s.connectorTagText}>{c}</Text>
+              </View>
+            ))}
+            <Text style={s.powerText}>{station.power}</Text>
+          </View>
         </View>
 
         {/* Motor Matemático */}
@@ -177,10 +179,11 @@ export default function ReservationScreen() {
           </View>
           {station.pricePerKWh > 0 && (
             <View style={[s.affordRow, { borderTopColor: math.canAfford ? colors.greenDim : colors.redDim }]}>
+              <Ionicons name={math.canAfford ? 'checkmark-circle' : 'alert-circle'} size={14} color={math.canAfford ? colors.green : colors.red} />
               <Text style={[s.affordLabel, { color: math.canAfford ? colors.green : colors.red }]}>
-                {math.canAfford ? '✓ Saldo suficiente' : '✗ Saldo insuficiente'}
+                {math.canAfford ? 'Saldo suficiente' : 'Saldo insuficiente'}
               </Text>
-              <Text style={s.affordBalance}>Tu saldo: {formatCOP(walletBalance)}</Text>
+              <Text style={s.affordBalance}>{formatCOP(walletBalance)}</Text>
             </View>
           )}
         </View>
@@ -239,7 +242,7 @@ const s = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
   },
-  stationCardLeft: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  stationCardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   stationCardAvatar: {
     width: 48,
     height: 48,
@@ -250,13 +253,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stationCardEmoji: { fontSize: 22 },
   stationCardInfo: { flex: 1 },
   stationName: { fontSize: 15, fontWeight: weights.bold, color: colors.textPrimary, marginBottom: 4 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  ratingText: { fontSize: 12, color: colors.yellow },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingText: { fontSize: 12, color: colors.yellow, fontWeight: weights.semibold },
   ratingCount: { fontSize: 12, color: colors.textMuted },
-  verifiedText: { fontSize: 11, color: colors.green },
+  verifiedText: { fontSize: 11, color: colors.green, marginLeft: -2 },
   connectorRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' },
   connectorTag: {
     backgroundColor: colors.cyanDim,
@@ -268,7 +270,7 @@ const s = StyleSheet.create({
   },
   connectorTagText: { fontSize: 10, color: colors.cyan, fontWeight: weights.semibold },
   powerText: { fontSize: 11, color: colors.textMuted, fontWeight: weights.medium },
-  stationPrice: { fontSize: 14, fontWeight: weights.bold, color: colors.green, textAlign: 'right' },
+  stationPrice: { fontSize: 14, fontWeight: weights.bold, color: colors.green },
 
   section: { marginBottom: 20 },
   sectionTitle: {
@@ -338,8 +340,8 @@ const s = StyleSheet.create({
   mathCostValue: { fontSize: 20, fontWeight: weights.bold, color: colors.green },
   affordRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 6,
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,

@@ -37,6 +37,22 @@ export default function HostSetupScreen() {
   const [connectors, setConnectors] = useState([]);
   const [payment, setPayment]       = useState('');
   const [loading, setLoading]       = useState(false);
+  const [coords, setCoords]         = useState({ latitude: 10.995, longitude: -74.80 });
+
+  const geocodeAddress = async (addr) => {
+    if (!addr.trim()) return;
+    try {
+      const query = encodeURIComponent(addr + ', Barranquilla, Colombia');
+      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'PlugInEV/1.0' } });
+      const data = await res.json();
+      if (data.length > 0) {
+        setCoords({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
+      }
+    } catch {
+      // keep default coords
+    }
+  };
 
   const toggleConnector = (c) =>
     setConnectors((p) => p.includes(c) ? p.filter((x) => x !== c) : [...p, c]);
@@ -54,8 +70,8 @@ export default function HostSetupScreen() {
       const payload = {
         name: name.trim(),
         address: address.trim(),
-        latitude: 10.995,
-        longitude: -74.80,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
         power: power,
         price_per_kwh: parseInt(price, 10) || 0,
         connectors: connectors,
@@ -81,6 +97,9 @@ export default function HostSetupScreen() {
     if (!canNext()) {
       Alert.alert('Campos requeridos', 'Completa todos los campos antes de continuar.');
       return;
+    }
+    if (step === 0) {
+      geocodeAddress(address);
     }
     if (step < STEPS.length - 1) setStep(step + 1);
     else handleFinish();

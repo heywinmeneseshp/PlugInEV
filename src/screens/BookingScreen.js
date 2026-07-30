@@ -10,12 +10,21 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 import { formatCOP } from '../utils/format';
+import { crearReserva } from '../services/api/reservas';
 
-const DATES = [
-  { key: 'today',    label: 'Hoy',    sub: '25 Jun' },
-  { key: 'tomorrow', label: 'Mañana', sub: '26 Jun' },
-  { key: 'day3',     label: 'Pasado', sub: '27 Jun' },
-];
+const buildDates = () => {
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return [0, 1, 2].map(offset => {
+    const d = new Date(); d.setDate(d.getDate() + offset);
+    return {
+      key: `day${offset}`,
+      label: offset === 0 ? 'Hoy' : offset === 1 ? 'Mañana' : days[d.getDay()],
+      sub: `${d.getDate()} ${months[d.getMonth()]}`,
+      date: d,
+    };
+  });
+};
 
 const TIME_SLOTS = [
   '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
@@ -45,11 +54,13 @@ export default function BookingScreen() {
   const route      = useRoute();
   const { station } = route.params;
 
+  const [dates] = useState(() => buildDates());
   const [step, setStep]                 = useState(0);
-  const [selectedDate, setSelectedDate] = useState('today');
+  const [selectedDate, setSelectedDate] = useState('day0');
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedDur, setSelectedDur]   = useState('');
   const [selectedPay, setSelectedPay]   = useState('wallet');
+  const [submitting, setSubmitting]     = useState(false);
 
   const powerKW = parseFloat(station.power) || 22;
   const isFree  = station.pricePerKWh === 0;
@@ -69,29 +80,48 @@ export default function BookingScreen() {
     return false;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!canNext()) {
       Alert.alert('Campos requeridos', 'Selecciona todas las opciones antes de continuar.');
       return;
     }
     if (step < STEPS.length - 1) { setStep(step + 1); return; }
 
-    const dur = DURATIONS.find((d) => d.key === selectedDur);
-    const { kwh, cost } = calcCost();
-    const dateLabel = DATES.find((d) => d.key === selectedDate)?.sub ?? '';
-    navigation.navigate('BookingConfirmation', {
-      reservation: {
-        id:           `RES-${Math.floor(10000 + Math.random() * 90000)}`,
-        station,
-        date:         dateLabel,
-        time:         selectedTime,
-        duration:     dur?.label ?? '',
-        kwh,
-        cost,
-        paymentLabel: PAYMENT_METHODS.find((p) => p.id === selectedPay)?.label ?? selectedPay,
-        accessInfo:   station.accessInfo,
-      },
-    });
+    setSubmitting(true);
+    try {
+      const dur = DURATIONS.find(d => d.key === selectedDur);
+      const { kwh, cost } = calcCost();
+      const dateObj = dates.find(d => d.key === selectedDate)?.date || new Date();
+      const [hh, mm] = selectedTime.split(':');
+      dateObj.setHours(parseInt(hh), parseInt(mm), 0, 0);
+
+      const reservation = await crearReserva({
+        station_id: station.id,
+        start_time: dateObj.toISOString(),
+        duration_minutes: Math.round((dur?.hours || 1) * 60),
+        estimated_kwh: kwh,
+        total_cost: cost,
+      });
+
+      navigation.navigate('BookingConfirmation', {
+        reservation: {
+          id: reservation._id || reservation.id,
+          station,
+          date: dates.find(d => d.key === selectedDate)?.sub ?? '',
+          time: selectedTime,
+          duration: dur?.label ?? '',
+          kwh,
+          cost,
+          paymentLabel: PAYMENT_METHODS.find(p => p.id === selectedPay)?.label ?? selectedPay,
+          accessInfo: station.accessInfo,
+        },
+      });
+    } catch (err) {
+      Alert.alert('Error', err.message || 'No se pudo crear la reserva');
+    } finally {
+      setSubmitting(false);
+    }
+    return;
   };
 
   const { kwh, cost } = calcCost();
@@ -165,7 +195,7 @@ export default function BookingScreen() {
 
             <Text style={s.fieldLabel}>Día</Text>
             <View style={s.dateRow}>
-              {DATES.map((d) => {
+              {dates.map((d) => {
                 const active = selectedDate === d.key;
                 return active ? (
                   <TouchableOpacity key={d.key} onPress={() => setSelectedDate(d.key)} activeOpacity={0.8} style={{ flex: 1 }}>
@@ -255,7 +285,7 @@ export default function BookingScreen() {
             <LinearGradient colors={['rgba(0,186,255,0.12)', 'rgba(0,255,140,0.08)']} style={s.summaryCard}>
               <SummaryRow icon="flash-outline"    label="Energía estimada" value={`${kwh} kWh`} />
               <SummaryRow icon="time-outline"     label="Duración"         value={DURATIONS.find((d) => d.key === selectedDur)?.label ?? ''} />
-              <SummaryRow icon="calendar-outline" label="Fecha y hora"     value={`${DATES.find((d) => d.key === selectedDate)?.sub} · ${selectedTime}`} />
+              <SummaryRow icon="calendar-outline" label="Fecha y hora"     value={`${dates.find((d) => d.key === selectedDate)?.sub} · ${selectedTime}`} />
               <View style={s.summaryDivider} />
               <View style={s.totalRow}>
                 <Text style={s.totalLabel}>Total en escrow</Text>
@@ -305,14 +335,14 @@ export default function BookingScreen() {
       {/* Footer CTA */}
       <View style={[s.footer, { paddingBottom: insets.bottom + 16 }]}>
         <GradientButton
-          label={step < STEPS.length - 1 ? 'Siguiente' : 'Confirmar y pagar'}
+          label={submitting ? 'Procesando...' : (step < STEPS.length - 1 ? 'Siguiente' : 'Confirmar y pagar')}
           onPress={handleNext}
-          disabled={!canNext()}
+          disabled={!canNext() || submitting}
           icon={
             <Ionicons
               name={step < STEPS.length - 1 ? 'arrow-forward' : 'lock-closed'}
               size={18}
-              color={canNext() ? '#050A15' : colors.textMuted}
+              color={canNext() && !submitting ? '#050A15' : colors.textMuted}
             />
           }
         />

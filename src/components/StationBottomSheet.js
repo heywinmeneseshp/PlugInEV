@@ -76,6 +76,17 @@ export default function StationBottomSheet({
             />
           )}
         </View>
+
+        {userRole === 'conductor' && (
+          <TouchableOpacity
+            onPress={() => onReserve && onReserve(station)}
+            activeOpacity={0.8}
+            style={styles.reserveInteligenteBtn}
+          >
+            <Ionicons name="flash-outline" size={15} color={colors.cyan} />
+            <Text style={styles.reserveInteligenteBtnText}>Reserva inteligente</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -202,5 +213,22 @@ const styles = StyleSheet.create({
     fontSize: fonts['2xl'],
     fontWeight: weights.bold,
     color: colors.bg,
+  },
+  reserveInteligenteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(0,186,255,0.4)',
+    backgroundColor: 'rgba(0,186,255,0.06)',
+  },
+  reserveInteligenteBtnText: {
+    fontSize: fonts.md,
+    fontWeight: weights.semibold,
+    color: colors.cyan,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Image, StyleSheet, Platform } from 'react-native';
+import { View, Image, StyleSheet, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapScreen from '../screens/MapScreen';
@@ -50,14 +50,26 @@ function TabIcon({ routeName, focused }) {
   );
 }
 
+function getAndroidNavBarHeight() {
+  if (Platform.OS !== 'android') return 0;
+  const screenH = Dimensions.get('screen').height;
+  const windowH = Dimensions.get('window').height;
+  const diff = screenH - windowH;
+  // Si hay diferencia real la usamos; si no (edge-to-edge) usamos 48 como fallback
+  return diff > 10 ? diff : 48;
+}
+
 export default function ConductorTabs() {
+  const androidPad = getAndroidNavBarHeight();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, Platform.OS === 'android' && { paddingBottom: androidPad + 6 }],
         tabBarShowLabel: true,
         tabBarLabelStyle: styles.tabLabel,
+        tabBarItemStyle: styles.tabItem,
         tabBarActiveTintColor: colors.green,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarIcon: ({ focused }) => <TabIcon routeName={route.name} focused={focused} />,
@@ -76,9 +88,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A1525',
     borderTopColor: 'rgba(255,255,255,0.07)',
     borderTopWidth: 1,
-    height: 62 + (Platform.OS === 'ios' ? 14 : 0),
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+    paddingTop: 2,
+    paddingBottom: Platform.select({ ios: 8, default: 8 }),
+  },
+  tabItem: {
+    paddingBottom: 0,
+    paddingTop: 2,
   },
   tabLabel: {
     fontSize: 10,

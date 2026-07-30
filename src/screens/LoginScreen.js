@@ -120,6 +120,13 @@ export default function LoginScreen() {
             <Text style={styles.errorText}>{error}</Text>
           )}
 
+          <TouchableOpacity
+            style={styles.forgotButton}
+            onPress={() => navigation.navigate('ForgotPassword')}
+          >
+            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
+
           <GradientButton
             label={loading ? 'Ingresando...' : 'Entrar'}
             onPress={handleLogin}
@@ -237,6 +244,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     color: colors.textPrimary,
+  },
+  forgotButton: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  forgotText: {
+    fontSize: 13,
+    color: colors.cyan,
+    fontWeight: weights.medium,
   },
   registerButton: {
     alignItems: 'center',

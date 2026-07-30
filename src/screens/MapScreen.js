@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import * as Location from 'expo-location';
 import {
   View,
   Text,
@@ -42,6 +43,9 @@ if (isNative) {
   const Maps = require('react-native-maps');
   MapView = Maps.default;
   Marker = Maps.Marker;
+  // PROVIDER_GOOGLE se importa para forzar Google Maps en iOS también
+  // En Android es el único provider disponible
+
 }
 
 export default function MapScreen() {
@@ -103,6 +107,18 @@ export default function MapScreen() {
     navigation.navigate('Reservation', { station });
   }, [navigation]);
 
+  const goToMyLocation = useCallback(async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+    mapRef.current?.animateToRegion({
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    }, 600);
+  }, []);
+
   const handleMapPress = useCallback((event) => {
     if (sheetVisible) { setSheetVisible(false); return; }
     const { coordinate } = event.nativeEvent;
@@ -150,6 +166,7 @@ export default function MapScreen() {
           style={styles.map}
           initialRegion={INITIAL_REGION}
           customMapStyle={darkMapStyle}
+          mapType="standard"
           onPress={handleMapPress}
           mapPadding={{ top: 180, right: 0, bottom: sheetVisible ? 140 : 16, left: 0 }}
           showsUserLocation
@@ -161,7 +178,8 @@ export default function MapScreen() {
             <Marker
               key={station.id}
               coordinate={{ latitude: station.latitude, longitude: station.longitude }}
-              tracksViewChanges={Platform.OS === 'android'}
+              tracksViewChanges={true}
+              onPress={() => { setSelectedStation(station); setSheetVisible(true); }}
             >
               <CustomMarker station={station} />
             </Marker>
@@ -225,51 +243,108 @@ export default function MapScreen() {
         userRole={userRole}
       />
 
-      {/* Location FAB */}
-      {!sheetVisible && (
-        <View style={[styles.locationWrapper, { bottom: 20 }]}>
-          <LocationButton onPress={() => mapRef.current?.animateToRegion(INITIAL_REGION, 800)} />
-        </View>
-      )}
+      {/* Location FAB — siempre visible */}
+      <View style={[styles.locationWrapper, { bottom: sheetVisible ? 220 : 20 }]}>
+        <LocationButton onPress={goToMyLocation} />
+      </View>
 
       <Sidebar visible={sidebarOpen} onClose={() => setSidebarOpen(false)} />
     </View>
   );
 }
 
+const MARKER_FREE     = '#37F26B';
+const MARKER_PAID     = '#19D4FF';
+const MARKER_OCCUPIED = '#FF5A5F';
+
 function CustomMarker({ station }) {
-  const isFree = station.pricePerKWh === 0;
-  let bgColor;
-  if (!station.available) bgColor = colors.red;
-  else if (isFree) bgColor = colors.green;
-  else bgColor = colors.cyan;
+  let accent;
+  if (!station.available)             accent = MARKER_OCCUPIED;
+  else if (station.pricePerKWh === 0) accent = MARKER_FREE;
+  else                                accent = MARKER_PAID;
 
   return (
     <View style={styles.markerWrapper}>
-      <View style={[styles.markerCard, { borderColor: bgColor }]}>
-        <Text style={[styles.markerCardText, { color: bgColor }]}>
+      <View style={[styles.markerCard, { borderColor: accent, shadowColor: accent }]}>
+        <Text style={[styles.markerCardText, { color: accent }]}>
           {station.pricePerKWh === 0 ? 'Gratis' : formatCOP(station.pricePerKWh)}
         </Text>
       </View>
-      <View style={styles.markerDotContainer}>
-        <View style={[styles.markerPulse, { backgroundColor: bgColor }]} />
-        <View style={[styles.markerBubble, { backgroundColor: bgColor }]} />
-      </View>
+      {Platform.OS === 'ios' ? (
+        <View style={[styles.markerDotIOS, { backgroundColor: accent, shadowColor: accent }]} />
+      ) : (
+        <View style={styles.markerDotWrap}>
+          <View style={[styles.markerGlowOuter, { backgroundColor: accent }]} />
+          <View style={[styles.markerGlowMid,  { backgroundColor: accent }]} />
+          <View style={[styles.markerDotCore,  { backgroundColor: accent }]} />
+        </View>
+      )}
     </View>
   );
 }
 
 const darkMapStyle = [
-  { elementType: 'geometry',              stylers: [{ color: '#050A15' }] },
-  { elementType: 'labels.text.stroke',    stylers: [{ color: '#0A1525' }] },
-  { elementType: 'labels.text.fill',      stylers: [{ color: '#A0AEC0' }] },
-  { featureType: 'road', elementType: 'geometry',          stylers: [{ color: '#0D1626' }] },
-  { featureType: 'road', elementType: 'labels.text.fill',  stylers: [{ color: '#A0AEC0' }] },
-  { featureType: 'water', elementType: 'geometry',         stylers: [{ color: '#030810' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#475569' }] },
-  { featureType: 'poi',   elementType: 'geometry',         stylers: [{ color: '#0D1626' }] },
-  { featureType: 'poi',   elementType: 'labels.text.fill', stylers: [{ color: '#64748B' }] },
-  { featureType: 'transit',      elementType: 'geometry',          stylers: [{ color: '#0D1626' }] },
-  { featureType: 'administrative', elementType: 'geometry.fill',   stylers: [{ color: '#050A15' }] },
-  { featureType: 'administrative', elementType: 'labels.text.fill',stylers: [{ color: '#64748B' }] },
+  // ── 1. BASE ──────────────────────────────────────────
+  // geometry #0A1322 solo para bordes/fondo fuera del mapa
+  { elementType: 'geometry',           stylers: [{ color: '#0A1322' }] },
+  { elementType: 'labels',      stylers: [{ visibility: 'off' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0A1322' }] },
+  { elementType: 'labels.text.fill',   stylers: [{ color: '#C8D0DC' }] },
+
+  // ── 2. AGUA ──────────────────────────────────────────
+  { featureType: 'water', elementType: 'geometry',         stylers: [{ color: '#234A8A' }] },
+  { featureType: 'water', elementType: 'labels.text',      stylers: [{ visibility: 'on' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9BA6B7' }] },
+
+  // ── 3. LANDSCAPE — ciudad como color base ───────────
+  // landscape general = color urbano #4A5568 (cubre toda la tierra)
+  { featureType: 'landscape',          elementType: 'geometry', stylers: [{ color: '#4A5568' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#4A5568' }] },
+
+  // Vegetación va DESPUÉS — sobreescribe el #4A5568 general
+  { featureType: 'landscape.natural',           elementType: 'geometry', stylers: [{ color: '#2D7466' }] },
+  { featureType: 'landscape.natural.terrain',   elementType: 'geometry', stylers: [{ color: '#2D7466' }] },
+  { featureType: 'landscape.natural.landcover', elementType: 'geometry', stylers: [{ color: '#2D7466' }] },
+
+  // ── 4. POI ────────────────────────────────────────────
+  { featureType: 'poi',      elementType: 'geometry',         stylers: [{ color: '#4A5568' }] },
+  { featureType: 'poi.park', elementType: 'geometry',         stylers: [{ color: '#245C50' }] },
+  { featureType: 'poi',      elementType: 'labels.text',      stylers: [{ visibility: 'on' }] },
+  { featureType: 'poi',      elementType: 'labels.text.fill', stylers: [{ color: '#9BA6B7' }] },
+  { featureType: 'poi',      elementType: 'labels.icon',      stylers: [{ visibility: 'on' }] },
+
+  // ── 5. TRANSIT ────────────────────────────────────────
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#0A1322' }] },
+
+  // ── 6. CALLES SECUNDARIAS ─────────────────────────────
+  { featureType: 'road',       elementType: 'geometry.fill',   stylers: [{ color: '#5B6678' }] }, // Calles secundarias
+  { featureType: 'road',       elementType: 'geometry.stroke', stylers: [{ color: '#3A4558' }] },
+  { featureType: 'road.local', elementType: 'geometry.fill',   stylers: [{ color: '#5B6678' }] },
+  { featureType: 'road.local', elementType: 'geometry.stroke', stylers: [{ color: '#3A4558' }] },
+  { featureType: 'road.local', elementType: 'labels.text',     stylers: [{ visibility: 'off' }] },
+
+  // ── 7. CALLES PRINCIPALES ─────────────────────────────
+  { featureType: 'road.arterial', elementType: 'geometry.fill',      stylers: [{ color: '#8B96A7' }] }, // Calles principales
+  { featureType: 'road.arterial', elementType: 'geometry.stroke',    stylers: [{ color: '#4A5568' }] },
+  { featureType: 'road.arterial', elementType: 'labels.text',        stylers: [{ visibility: 'on' }] },
+  { featureType: 'road.arterial', elementType: 'labels.text.fill',   stylers: [{ color: '#9BA6B7' }] }, // Texto secundario
+  { featureType: 'road.arterial', elementType: 'labels.text.stroke', stylers: [{ color: '#0A1322' }] },
+
+  // ── 8. AUTOPISTAS ─────────────────────────────────────
+  { featureType: 'road.highway',                   elementType: 'geometry.fill',        stylers: [{ color: '#A4AEBE' }] }, // Autopistas
+  { featureType: 'road.highway',                   elementType: 'geometry.stroke',      stylers: [{ color: '#5B6678' }] },
+  { featureType: 'road.highway',                   elementType: 'labels.text',          stylers: [{ visibility: 'on' }] },
+  { featureType: 'road.highway',                   elementType: 'labels.text.fill',     stylers: [{ color: '#C8D0DC' }] }, // Texto primario
+  { featureType: 'road.highway',                   elementType: 'labels.text.stroke',   stylers: [{ color: '#0A1322' }] },
+  { featureType: 'road.highway.controlled_access', elementType: 'geometry.fill',        stylers: [{ color: '#A4AEBE' }] },
+  { featureType: 'road.highway.controlled_access', elementType: 'geometry.stroke',      stylers: [{ color: '#5B6678' }] },
+
+  // ── 9. ADMINISTRATIVO ─────────────────────────────────
+  { featureType: 'administrative',              elementType: 'geometry.stroke',     stylers: [{ color: '#2A3A50' }, { weight: 0.5 }] },
+  { featureType: 'administrative.locality',     elementType: 'labels.text',         stylers: [{ visibility: 'on' }] },
+  { featureType: 'administrative.locality',     elementType: 'labels.text.fill',    stylers: [{ color: '#C8D0DC' }] }, // Texto primario
+  { featureType: 'administrative.locality',     elementType: 'labels.text.stroke',  stylers: [{ color: '#0A1322' }] },
+  { featureType: 'administrative.neighborhood', elementType: 'labels.text',         stylers: [{ visibility: 'on' }] },
+  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill',    stylers: [{ color: '#9BA6B7' }] }, // Texto secundario
+  { featureType: 'administrative.neighborhood', elementType: 'labels.text.stroke',  stylers: [{ color: '#0A1322' }] },
 ];
