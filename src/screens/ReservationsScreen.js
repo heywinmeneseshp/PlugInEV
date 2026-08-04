@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -7,49 +7,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import RatingModal from '../components/RatingModal';
+import DemoBadge from '../components/DemoBadge';
 import { formatCOP } from '../utils/format';
 import { colors, weights, radius } from '../styles/theme';
 import { listarReservas, calificarReserva } from '../services/api/reservas';
 
 const TABS = ['Activas', 'Historial'];
 
-const MOCK_RESERVATIONS = [
-  {
-    id: '1',
-    stationName: 'ElectroCarga Norte',
-    address:     'Cra. 65 #80-120, Barranquilla',
-    date:  'Hoy',   time: '14:00', duration: '1h',
-    cost:  20625,   connector: 'CCS', kwh: 25,
-    status: 'active',
-  },
-  {
-    id: '2',
-    stationName: 'VoltStation El Prado',
-    address:     'Cra. 54 #70-30, El Prado',
-    date:  'Hoy',   time: '16:30', duration: '2h',
-    cost:  16200,   connector: 'Type 2', kwh: 24,
-    status: 'completed',
-  },
-  {
-    id: '3',
-    stationName: 'E-Charge Buenavista',
-    address:     'Cra. 51B #88-22, Buenavista',
-    date:  'Ayer',  time: '10:00', duration: '1h',
-    cost:  32400,   connector: 'CHAdeMO', kwh: 30,
-    status: 'completed',
-  },
-  {
-    id: '4',
-    stationName: 'PlugExpress Sur',
-    address:     'Av. Murillo #55-200, Barranquilla',
-    date:  '23/06', time: '08:00', duration: '3h',
-    cost:  43200,   connector: 'CCS', kwh: 36,
-    status: 'cancelled',
-  },
-];
+const ACTIVE_STATES = ['pending', 'confirmed', 'active'];
 
 const STATUS = {
-  active:    { label: 'Activa',      color: colors.cyan,  bg: 'rgba(0,186,255,0.12)'  },
+  pending:   { label: 'Pendiente',   color: '#FFD60A',    bg: 'rgba(255,214,10,0.12)' },
+  confirmed: { label: 'Confirmada',  color: colors.cyan,  bg: 'rgba(0,186,255,0.12)'  },
+  active:    { label: 'En carga',    color: colors.cyan,  bg: 'rgba(0,186,255,0.12)'  },
   completed: { label: 'Completada',  color: colors.green, bg: 'rgba(0,255,140,0.12)' },
   cancelled: { label: 'Cancelada',   color: colors.red,   bg: 'rgba(255,59,48,0.12)' },
 };
@@ -63,8 +33,11 @@ export default function ReservationsScreen() {
   const [rated, setRated]             = useState({});
   const [allReservations, setAllReservations] = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [fetchError, setFetchError]   = useState(false);
 
-  useEffect(() => {
+  const fetchReservations = useCallback(() => {
+    setLoading(true);
+    setFetchError(false);
     listarReservas()
       .then(data => {
         const mapped = (Array.isArray(data) ? data : []).map(r => ({
@@ -74,22 +47,24 @@ export default function ReservationsScreen() {
           date: new Date(r.start_time || r.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit' }),
           time: new Date(r.start_time || r.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
           duration: r.duration_minutes ? `${r.duration_minutes}min` : '—',
-          cost: r.cost || 0,
-          connector: r.connector_type || 'CCS',
-          kwh: r.kwh_delivered || 0,
-          status: r.status === 'active' ? 'active' : r.status === 'completed' ? 'completed' : r.status === 'cancelled' ? 'cancelled' : 'completed',
+          cost: r.total_cost || 0,
+          connector: r.connector || 'CCS',
+          kwh: r.energy_kwh || r.estimated_kwh || 0,
+          status: r.status || 'pending',
           reservationId: r._id || r.id,
           station: r.station,
         }));
         setAllReservations(mapped);
       })
-      .catch(() => setAllReservations([]))
+      .catch(() => { setAllReservations([]); setFetchError(true); })
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { fetchReservations(); }, [fetchReservations]);
+
   const filtered = activeTab === 'Activas'
-    ? allReservations.filter((r) => r.status === 'active')
-    : allReservations.filter((r) => r.status !== 'active');
+    ? allReservations.filter((r) => ACTIVE_STATES.includes(r.status))
+    : allReservations.filter((r) => !ACTIVE_STATES.includes(r.status));
 
   const handleRate = (res) => setRatingRes(res);
 
@@ -104,6 +79,7 @@ export default function ReservationsScreen() {
     <View style={[s.container, { paddingTop: insets.top }]}>
       <View style={s.header}>
         <Text style={s.headerTitle}>Reservas</Text>
+        <DemoBadge style={{ marginTop: 6 }} />
       </View>
 
       {/* Tabs */}
@@ -125,11 +101,23 @@ export default function ReservationsScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#00BAFF" style={{ marginTop: 40 }} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color="#00BAFF" size="large" />
+        </View>
+      ) : fetchError ? (
+        <View style={s.empty}>
+          <Ionicons name="cloud-offline-outline" size={42} color={colors.textMuted} style={{ marginBottom: 12 }} />
+          <Text style={s.emptyTitle}>Sin conexión</Text>
+          <Text style={s.emptyText}>No se pudieron cargar tus reservas.</Text>
+          <TouchableOpacity onPress={fetchReservations} style={s.retryBtn} activeOpacity={0.8}>
+            <Text style={s.retryText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
       ) : null}
 
+      {!loading && !fetchError && (
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-        {!loading && filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="calendar-outline" size={42} color={colors.textMuted} style={{ marginBottom: 12 }} />
             <Text style={s.emptyTitle}>{activeTab === 'Activas' ? 'Sin reservas activas' : 'Sin historial'}</Text>
@@ -169,7 +157,7 @@ export default function ReservationsScreen() {
               {/* Amount row */}
               <View style={[s.amountRow, { backgroundColor: isActive ? 'rgba(0,186,255,0.07)' : 'rgba(255,255,255,0.04)' }]}>
                 <Text style={s.amountLabel}>
-                  {isActive ? 'En escrow' : item.status === 'cancelled' ? 'Reembolsado' : 'Total pagado'}
+                  {isActive ? 'Retenido' : item.status === 'cancelled' ? 'Reembolsado' : 'Total pagado'}
                 </Text>
                 <Text style={[s.amountValue, { color: isActive ? colors.cyan : item.status === 'cancelled' ? colors.red : colors.green }]}>
                   {formatCOP(item.cost)}
@@ -211,6 +199,7 @@ export default function ReservationsScreen() {
 
         <View style={{ height: insets.bottom + 24 }} />
       </ScrollView>
+      )}
 
       <RatingModal
         visible={!!ratingRes}
@@ -258,9 +247,15 @@ const s = StyleSheet.create({
 
   scroll: { paddingHorizontal: 20, gap: 12 },
 
-  empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 },
+  empty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24, flex: 1 },
   emptyTitle: { fontSize: 18, fontWeight: weights.bold, color: colors.textPrimary, marginBottom: 8 },
   emptyText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
+  retryBtn: {
+    marginTop: 16, paddingHorizontal: 24, paddingVertical: 10,
+    borderRadius: 20, borderWidth: 1, borderColor: 'rgba(0,186,255,0.4)',
+    backgroundColor: 'rgba(0,186,255,0.08)',
+  },
+  retryText: { fontSize: 14, color: colors.cyan, fontWeight: weights.semibold },
 
   card: {
     backgroundColor: 'rgba(255,255,255,0.05)',

@@ -11,6 +11,7 @@ import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 import { formatCOP } from '../utils/format';
 import { crearReserva } from '../services/api/reservas';
+import { useAuth } from '../context/AuthContext';
 
 const buildDates = () => {
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -52,6 +53,7 @@ export default function BookingScreen() {
   const insets     = useSafeAreaInsets();
   const navigation = useNavigation();
   const route      = useRoute();
+  const { user }   = useAuth();
   const { station } = route.params;
 
   const [dates] = useState(() => buildDates());
@@ -101,6 +103,11 @@ export default function BookingScreen() {
         duration_minutes: Math.round((dur?.hours || 1) * 60),
         estimated_kwh: kwh,
         total_cost: cost,
+        driver_name: user?.name || user?.email || 'Conductor',
+        vehicle: user?.driverProfile?.vehicle_model || '-',
+        connector: station.connectors?.[0] || '-',
+        station_name: station.name,
+        station_address: station.address,
       });
 
       navigation.navigate('BookingConfirmation', {
@@ -279,7 +286,7 @@ export default function BookingScreen() {
         {step === 2 && (
           <View style={s.stepContent}>
             <Text style={s.stepTitle}>Método de pago</Text>
-            <Text style={s.stepSub}>El pago queda en escrow hasta confirmar la sesión.</Text>
+            <Text style={s.stepSub}>El pago queda retenido en garantía hasta confirmar la sesión.</Text>
 
             {/* Summary card */}
             <LinearGradient colors={['rgba(0,186,255,0.12)', 'rgba(0,255,140,0.08)']} style={s.summaryCard}>
@@ -288,7 +295,7 @@ export default function BookingScreen() {
               <SummaryRow icon="calendar-outline" label="Fecha y hora"     value={`${dates.find((d) => d.key === selectedDate)?.sub} · ${selectedTime}`} />
               <View style={s.summaryDivider} />
               <View style={s.totalRow}>
-                <Text style={s.totalLabel}>Total en escrow</Text>
+                <Text style={s.totalLabel}>Total retenido</Text>
                 <Text style={s.totalValue}>{isFree ? 'Gratis' : formatCOP(cost)}</Text>
               </View>
             </LinearGradient>
@@ -323,7 +330,7 @@ export default function BookingScreen() {
             <View style={s.escrowBox}>
               <Ionicons name="shield-checkmark-outline" size={16} color={colors.cyan} />
               <Text style={s.escrowText}>
-                Tu pago queda retenido en escrow hasta que confirmes que la sesión fue exitosa. Si el anfitrión no confirma tu llegada en 2 horas, recibes el reembolso automático.
+                Tu pago queda retenido en garantía hasta que confirmes que la sesión fue exitosa. Si el anfitrión no confirma tu llegada en 2 horas, recibes el reembolso automático.
               </Text>
             </View>
           </View>

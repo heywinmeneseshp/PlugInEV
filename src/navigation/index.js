@@ -11,15 +11,23 @@ import CDRScreen from '../screens/CDRScreen';
 import StationDetailScreen from '../screens/StationDetailScreen';
 import BookingScreen from '../screens/BookingScreen';
 import BookingConfirmationScreen from '../screens/BookingConfirmationScreen';
+import { colors } from '../styles/theme';
 
 const Stack = createNativeStackNavigator();
+const screenBg = { backgroundColor: colors.bg };
 
 function MainScreens() {
   const { user } = useAuth();
   const isHost = user?.role === 'anfitrion';
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        contentStyle: screenBg,
+      }}
+    >
       {isHost ? (
         <Stack.Screen name="AnfitrionHome" component={AnfitrionStack} />
       ) : (
@@ -56,14 +64,14 @@ export default function RootNavigator() {
 
   if (!isReady) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0A1322', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#19D4FF" />
       </View>
     );
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: screenBg }}>
       {!isAuthenticated ? (
         <Stack.Screen name="Auth" component={AuthStack} />
       ) : (

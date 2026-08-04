@@ -33,7 +33,7 @@ const ROLES = [
 export default function RolSelectionScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { switchRole, setRole, finishRegistration } = useAuth();
+  const { switchRole, finishRegistration } = useAuth();
   const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(false);
   const scaleAnims = useRef(ROLES.map(() => new Animated.Value(1))).current;
@@ -46,13 +46,13 @@ export default function RolSelectionScreen() {
     setLoading(true);
     try {
       if (selectedRole === 'anfitrion') {
-        // Intentar sincronizar con el API; si falla (usuario nuevo sin rol host) se asigna localmente
-        await switchRole('anfitrion').catch(() => setRole('anfitrion'));
+        // Intentar sincronizar con el API; si falla (usuario nuevo sin rol host) no bloquea
+        await switchRole('anfitrion').catch(() => {});
       }
-      finishRegistration();
     } catch {
-      finishRegistration();
+      // ignorar — el rol seleccionado se aplica localmente de todas formas
     } finally {
+      finishRegistration(selectedRole);
       setLoading(false);
     }
   };

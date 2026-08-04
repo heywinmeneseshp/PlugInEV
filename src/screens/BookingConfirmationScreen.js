@@ -81,7 +81,7 @@ export default function BookingConfirmationScreen() {
           <DetailRow icon="wallet-outline"           label="Método de pago"   value={reservation.paymentLabel}                        />
           <View style={s.divider} />
           <View style={s.totalRow}>
-            <Text style={s.totalLabel}>Total en escrow</Text>
+            <Text style={s.totalLabel}>Total retenido</Text>
             <Text style={s.totalValue}>
               {reservation.cost === 0 ? 'Gratis' : formatCOP(reservation.cost)}
             </Text>

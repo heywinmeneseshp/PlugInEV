@@ -66,6 +66,7 @@ export default function ConductorTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        sceneContainerStyle: { backgroundColor: colors.bg },
         tabBarStyle: [styles.tabBar, Platform.OS === 'android' && { paddingBottom: androidPad + 6 }],
         tabBarShowLabel: true,
         tabBarLabelStyle: styles.tabLabel,

@@ -149,8 +149,32 @@ const styles = StyleSheet.create({
   /* Location FAB */
   locationWrapper: {
     position: 'absolute',
-    right: 16,
+    right: 18,
     zIndex: 10,
+  },
+
+  /* Error banner */
+  errorBanner: {
+    position: 'absolute',
+    bottom: 90,
+    left: 16,
+    right: 16,
+    zIndex: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(13,22,38,0.97)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,214,10,0.4)',
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#FFD60A',
+    fontWeight: '600',
   },
 
   /* Markers */

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import * as Location from 'expo-location';
 import {
   View,
@@ -8,6 +8,7 @@ import {
   Platform,
   FlatList,
 } from 'react-native';
+import WebView from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { listarEstaciones } from '../services/api/estaciones';
@@ -21,39 +22,224 @@ import StationBottomSheet from '../components/StationBottomSheet';
 import FilterBar from '../components/FilterBar';
 import SearchModal from '../components/SearchModal';
 import Sidebar from '../components/Sidebar';
+import DemoBadge from '../components/DemoBadge';
 import styles from '../styles/MapScreenStyles';
 
 const { width, height } = Dimensions.get('window');
-const ASPECT_RATIO = width / height;
-const LATITUDE_DELTA = 0.05;
-const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
-
-const INITIAL_REGION = {
-  latitude: 10.995,
-  longitude: -74.80,
-  latitudeDelta: LATITUDE_DELTA,
-  longitudeDelta: LONGITUDE_DELTA,
-};
-
 const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
 
-let MapView = null;
-let Marker = null;
-if (isNative) {
-  const Maps = require('react-native-maps');
-  MapView = Maps.default;
-  Marker = Maps.Marker;
-  // PROVIDER_GOOGLE se importa para forzar Google Maps en iOS también
-  // En Android es el único provider disponible
+// ── Paleta "Midnight Teal" — amigable, armoniza con cyan/verde de la app ───
+const C = {
+  bg:     '#1E2B3C',   // slate azul — tierra sin clasificar (no negro, no verde)
+  water:  '#1E6FA8',   // teal claro — familia del cyan de la app
+  river:  '#1A5A8C',
+  park:   '#0A1C14',   // verde muy oscuro casi negro
+  urban:  '#141E2B',   // urbano: levemente más oscuro que bg
+  bldg:   '#192436',   // edificios: sutil diferencia
+  moto:   '#5BBDD6',   // autopistas: cyan de la app atenuado
+  trunk:  '#4AA0BC',
+  prime:  '#3C8299',
+  second: '#2E6070',
+  minor:  '#345E78',   // calles menores más claras para verlas al hacer zoom
+  label:  'rgba(255,255,255,0.94)',
+  labsub: 'rgba(200,225,240,0.65)',
+  halo:   '#111C28',
+};
 
-}
+// ── MapLibre GL style (OpenFreeMap vector tiles) ────────────────────────────
+const MAP_STYLE = {
+  version: 8,
+  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+  sources: { ofm: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+  layers: [
+    // Tierra sin clasificar = slate azul (ciudad que "cae" aquí se ve bien)
+    { id:'bg',        type:'background', paint:{ 'background-color': C.bg } },
+
+    // Agua
+    { id:'water',     type:'fill', source:'ofm', 'source-layer':'water',
+      paint:{ 'fill-color': C.water } },
+    { id:'waterway',  type:'line', source:'ofm', 'source-layer':'waterway',
+      paint:{ 'line-color': C.river, 'line-width':['interpolate',['linear'],['zoom'],8,1,15,4] } },
+
+    // Naturaleza explícita (sólo lo que OpenStreetMap tiene taggeado como verde)
+    { id:'landcover', type:'fill', source:'ofm', 'source-layer':'landcover',
+      filter:['in','class','grass','wood','farmland','wetland'],
+      paint:{ 'fill-color': C.park } },
+    { id:'park',      type:'fill', source:'ofm', 'source-layer':'landuse',
+      filter:['in','class','park','grass','cemetery','nature_reserve','recreation_ground','allotments'],
+      paint:{ 'fill-color': C.park } },
+
+    // Urbano explícito — sólo lo taggeado como residencial/comercial/etc.
+    // El resto del suelo urbano sin tag queda en slate azul (bg) — que está bien
+    { id:'urban',     type:'fill', source:'ofm', 'source-layer':'landuse',
+      filter:['in','class','residential','commercial','industrial','retail','suburb','school','hospital','university','military','parking'],
+      paint:{ 'fill-color': C.urban } },
+
+    // Edificios — dan textura a zoom alto
+    { id:'building',  type:'fill', source:'ofm', 'source-layer':'building',
+      paint:{ 'fill-color': C.bldg, 'fill-outline-color': C.bg } },
+
+    // Calles — casings primero, relleno encima
+    { id:'casing-moto', type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['in','class','motorway','trunk'],
+      layout:{ 'line-cap':'round', 'line-join':'round' },
+      paint:{ 'line-color':'#0C1624', 'line-width':['interpolate',['linear'],['zoom'],6,5,18,22] } },
+    { id:'casing-pri',  type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==','class','primary'],
+      layout:{ 'line-cap':'round', 'line-join':'round' },
+      paint:{ 'line-color':'#0E1A26', 'line-width':['interpolate',['linear'],['zoom'],8,4,18,15] } },
+    { id:'road-minor',  type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['in','class','minor','service','track'],
+      paint:{ 'line-color': C.minor, 'line-width':['interpolate',['linear'],['zoom'],13,0.5,18,3] } },
+    { id:'road-tert',   type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==','class','tertiary'],
+      paint:{ 'line-color': C.second, 'line-width':['interpolate',['linear'],['zoom'],10,0.8,18,5] } },
+    { id:'road-sec',    type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==','class','secondary'],
+      paint:{ 'line-color': C.second, 'line-width':['interpolate',['linear'],['zoom'],9,1,18,7] } },
+    { id:'road-pri',    type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==','class','primary'],
+      layout:{ 'line-cap':'round', 'line-join':'round' },
+      paint:{ 'line-color': C.prime, 'line-width':['interpolate',['linear'],['zoom'],8,1.5,18,11] } },
+    { id:'road-trunk',  type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==','class','trunk'],
+      layout:{ 'line-cap':'round', 'line-join':'round' },
+      paint:{ 'line-color': C.trunk, 'line-width':['interpolate',['linear'],['zoom'],7,1.5,18,13] } },
+    { id:'road-moto',   type:'line', source:'ofm', 'source-layer':'transportation',
+      filter:['==','class','motorway'],
+      layout:{ 'line-cap':'round', 'line-join':'round' },
+      paint:{ 'line-color': C.moto,  'line-width':['interpolate',['linear'],['zoom'],6,2,18,15] } },
+
+    // Etiquetas
+    { id:'lbl-road',   type:'symbol', source:'ofm', 'source-layer':'transportation_name',
+      layout:{ 'text-field':['get','name'], 'text-size':10, 'symbol-placement':'line', 'text-font':['Noto Sans Regular'], 'text-max-angle':30 },
+      paint: { 'text-color': C.labsub, 'text-halo-color': C.halo, 'text-halo-width':1.5 } },
+    { id:'lbl-suburb', type:'symbol', source:'ofm', 'source-layer':'place',
+      filter:['in','class','suburb','neighbourhood','quarter','hamlet'],
+      layout:{ 'text-field':['get','name'], 'text-size':11, 'text-font':['Noto Sans Regular'] },
+      paint: { 'text-color': C.labsub, 'text-halo-color': C.halo, 'text-halo-width':1.5 } },
+    { id:'lbl-town',   type:'symbol', source:'ofm', 'source-layer':'place',
+      filter:['in','class','town','village'],
+      layout:{ 'text-field':['get','name'], 'text-size':13, 'text-font':['Noto Sans Bold'] },
+      paint: { 'text-color': C.label, 'text-halo-color': C.halo, 'text-halo-width':2 } },
+    { id:'lbl-city',   type:'symbol', source:'ofm', 'source-layer':'place',
+      filter:['==','class','city'],
+      layout:{ 'text-field':['get','name'], 'text-size':['interpolate',['linear'],['zoom'],8,14,14,20], 'text-font':['Noto Sans Bold'] },
+      paint: { 'text-color': C.label, 'text-halo-color': C.halo, 'text-halo-width':2 } },
+  ],
+};
+
+const MAP_HTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"><\/script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box }
+    html,body,#map { width:100%; height:100%; background:#0B0F1A }
+    .maplibregl-ctrl-logo,.maplibregl-ctrl-attrib { display:none!important }
+    .mk-wrap { display:flex; flex-direction:column; align-items:center; cursor:pointer; }
+    .pm { background:#0D1117; border-radius:8px; padding:3px 8px;
+          font:700 11px/1 -apple-system,sans-serif; white-space:nowrap; border:1.5px solid }
+    .pm.free { color:#37F26B; border-color:#37F26B; box-shadow:0 2px 10px #37F26B55 }
+    .pm.paid { color:#19D4FF; border-color:#19D4FF; box-shadow:0 2px 10px #19D4FF55 }
+    .pm.busy { color:#FF5A5F; border-color:#FF5A5F; box-shadow:0 2px 10px #FF5A5F55 }
+    .mk-stem { width:2px; height:7px; opacity:0.6; }
+    .mk-dot  { width:9px; height:9px; border-radius:50%; border:1px solid rgba(255,255,255,0.5); }
+    .free .mk-stem,.mk-dot.free { background:#37F26B; box-shadow:0 0 7px #37F26B }
+    .paid .mk-stem,.mk-dot.paid { background:#19D4FF; box-shadow:0 0 7px #19D4FF }
+    .busy .mk-stem,.mk-dot.busy { background:#FF5A5F; box-shadow:0 0 7px #FF5A5F }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:.9} 50%{transform:scale(1.8);opacity:0} }
+    .ud-wrap { position:relative; width:36px; height:36px; display:flex;
+               align-items:center; justify-content:center; }
+    .ud-ring { position:absolute; width:36px; height:36px; border-radius:50%;
+               background:rgba(0,122,255,0.2); border:1.5px solid rgba(0,122,255,0.5);
+               animation:pulse 2s ease-out infinite; }
+    .ud { width:14px; height:14px; border-radius:50%; position:relative;
+          background:#3B9EFF; border:2.5px solid #fff; box-shadow:0 0 12px #3B9EFF }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+(function(){
+  var map = new maplibregl.Map({
+    container:'map',
+    style:${JSON.stringify(MAP_STYLE)},
+    center:[-74.80,10.995],
+    zoom:13,
+    attributionControl:false
+  });
+
+  var uMark=null, sMark={};
+
+  function fmt(p){ return '$'+Math.round(p).toLocaleString('es-CO'); }
+
+  function addMarkers(stations){
+    Object.values(sMark).forEach(function(m){m.remove();}); sMark={};
+    stations.forEach(function(s){
+      if(!s.latitude||!s.longitude)return;
+      var cls=!s.available?'busy':s.pricePerKWh===0?'free':'paid';
+      var lbl=!s.available?'Ocupado':s.pricePerKWh===0?'Gratis':fmt(s.pricePerKWh);
+      var wrap=document.createElement('div'); wrap.className='mk-wrap';
+      var card=document.createElement('div'); card.className='pm '+cls; card.textContent=lbl;
+      var stem=document.createElement('div'); stem.className='mk-stem '+cls;
+      var dot =document.createElement('div'); dot.className ='mk-dot '+cls;
+      wrap.appendChild(card); wrap.appendChild(stem); wrap.appendChild(dot);
+      wrap.addEventListener('click',function(e){
+        e.stopPropagation();
+        window.ReactNativeWebView.postMessage(JSON.stringify({type:'markerPress',stationId:s.id}));
+      });
+      sMark[s.id]=new maplibregl.Marker({element:wrap,anchor:'bottom'})
+        .setLngLat([s.longitude,s.latitude]).addTo(map);
+    });
+  }
+
+  function setUser(lat,lng){
+    if(!uMark){
+      var wrap=document.createElement('div'); wrap.className='ud-wrap';
+      var ring=document.createElement('div'); ring.className='ud-ring';
+      var dot=document.createElement('div');  dot.className='ud';
+      wrap.appendChild(ring); wrap.appendChild(dot);
+      uMark=new maplibregl.Marker({element:wrap,anchor:'center'}).setLngLat([lng,lat]).addTo(map);
+    }else{ uMark.setLngLat([lng,lat]); }
+  }
+
+  map.on('click',function(){
+    window.ReactNativeWebView.postMessage(JSON.stringify({type:'mapPress'}));
+  });
+
+  window.handleMsg=function(raw){
+    try{
+      var m=JSON.parse(raw);
+      if(m.type==='addMarkers')   addMarkers(m.stations);
+      else if(m.type==='flyTo')   map.flyTo({center:[m.lng,m.lat],zoom:m.zoom||15,duration:600});
+      else if(m.type==='userLocation') setUser(m.lat,m.lng);
+      else if(m.type==='reset')   map.flyTo({center:[-74.80,10.995],zoom:13,duration:600});
+    }catch(e){}
+  };
+
+  document.addEventListener('message',function(e){window.handleMsg(e.data);});
+  window.addEventListener('message',function(e){window.handleMsg(e.data);});
+
+  map.on('load',function(){
+    window.ReactNativeWebView.postMessage(JSON.stringify({type:'ready'}));
+  });
+})();
+<\/script>
+</body>
+</html>`;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { user } = useAuth();
   const userRole = user?.role || 'conductor';
-  const mapRef = useRef(null);
+
+  const webViewRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -63,8 +249,10 @@ export default function MapScreen() {
   const walletBalance = user?.walletBalance || 0;
 
   const [stations, setStations] = useState([]);
+  const [stationsError, setStationsError] = useState(false);
 
-  useEffect(() => {
+  const fetchStations = useCallback(() => {
+    setStationsError(false);
     listarEstaciones()
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -90,10 +278,12 @@ export default function MapScreen() {
           setStations(mapped);
         }
       })
-      .catch(() => {});
+      .catch(() => setStationsError(true));
   }, []);
 
-  const filteredStations = useCallback(() => {
+  useEffect(() => { fetchStations(); }, [fetchStations]);
+
+  const filteredStations = useMemo(() => {
     return stations.filter((s) => {
       if (activeFilter === 'free') return s.pricePerKWh === 0;
       if (activeFilter === 'paid') return s.pricePerKWh > 0;
@@ -102,38 +292,47 @@ export default function MapScreen() {
     });
   }, [activeFilter, stations]);
 
+  const injectToMap = useCallback((msg) => {
+    const js = `window.handleMsg(${JSON.stringify(JSON.stringify(msg))}); true;`;
+    webViewRef.current?.injectJavaScript(js);
+  }, []);
+
+  useEffect(() => {
+    if (!mapReady) return;
+    const mapData = filteredStations.map(s => ({
+      id: s.id, latitude: s.latitude, longitude: s.longitude,
+      available: s.available, pricePerKWh: s.pricePerKWh,
+    }));
+    injectToMap({ type: 'addMarkers', stations: mapData });
+  }, [mapReady, filteredStations, injectToMap]);
+
+  const handleWebViewMessage = useCallback((event) => {
+    try {
+      const msg = JSON.parse(event.nativeEvent.data);
+      if (msg.type === 'ready') {
+        setMapReady(true);
+      } else if (msg.type === 'markerPress') {
+        const station = stations.find(s => s.id === msg.stationId);
+        if (station) { setSelectedStation(station); setSheetVisible(true); }
+      } else if (msg.type === 'mapPress') {
+        setSheetVisible(false);
+      }
+    } catch (e) {}
+  }, [stations]);
+
   const handleReserve = useCallback((station) => {
     setSheetVisible(false);
-    navigation.navigate('Reservation', { station });
+    navigation.navigate('Booking', { station });
   }, [navigation]);
 
   const goToMyLocation = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return;
     const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    mapRef.current?.animateToRegion({
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-    }, 600);
-  }, []);
-
-  const handleMapPress = useCallback((event) => {
-    if (sheetVisible) { setSheetVisible(false); return; }
-    const { coordinate } = event.nativeEvent;
-    const threshold = 0.008;
-    let nearest = null;
-    let minDist = Infinity;
-    for (const s of filteredStations()) {
-      const d = Math.hypot(s.latitude - coordinate.latitude, s.longitude - coordinate.longitude);
-      if (d < minDist) { minDist = d; nearest = s; }
-    }
-    if (nearest && minDist < threshold) {
-      setSelectedStation(nearest);
-      setSheetVisible(true);
-    }
-  }, [sheetVisible, filteredStations]);
+    const { latitude, longitude } = pos.coords;
+    injectToMap({ type: 'userLocation', lat: latitude, lng: longitude });
+    injectToMap({ type: 'flyTo', lat: latitude, lng: longitude, zoom: 15 });
+  }, [injectToMap]);
 
   const renderStationCard = ({ item }) => (
     <TouchableOpacity
@@ -159,38 +358,23 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Map or web fallback */}
       {isNative ? (
-        <MapView
-          ref={mapRef}
+        <WebView
+          ref={webViewRef}
           style={styles.map}
-          initialRegion={INITIAL_REGION}
-          customMapStyle={darkMapStyle}
-          mapType="standard"
-          onPress={handleMapPress}
-          mapPadding={{ top: 180, right: 0, bottom: sheetVisible ? 140 : 16, left: 0 }}
-          showsUserLocation
-          showsMyLocationButton={false}
-          rotateEnabled={false}
-          toolbarEnabled={false}
-        >
-          {filteredStations().map((station) => (
-            <Marker
-              key={station.id}
-              coordinate={{ latitude: station.latitude, longitude: station.longitude }}
-              tracksViewChanges={true}
-              onPress={() => { setSelectedStation(station); setSheetVisible(true); }}
-            >
-              <CustomMarker station={station} />
-            </Marker>
-          ))}
-        </MapView>
+          source={{ html: MAP_HTML }}
+          onMessage={handleWebViewMessage}
+          javaScriptEnabled
+          originWhitelist={['*']}
+          scrollEnabled={false}
+          mixedContentMode="always"
+        />
       ) : (
         <View style={styles.webFallback}>
           <Text style={styles.webFallbackTitle}>plügin</Text>
           <Text style={styles.webFallbackSub}>Estaciones de carga cercanas</Text>
           <FlatList
-            data={filteredStations()}
+            data={filteredStations}
             keyExtractor={(item) => item.id}
             renderItem={renderStationCard}
             contentContainerStyle={styles.listContent}
@@ -201,8 +385,6 @@ export default function MapScreen() {
 
       {/* ── Top overlay ── */}
       <View style={[styles.topOverlay, { paddingTop: insets.top + 10 }]}>
-
-        {/* Row 1: hamburger ←→ wallet */}
         <View style={styles.topRow}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => setSidebarOpen(true)}>
             <Ionicons name="menu-outline" size={22} color={colors.textPrimary} />
@@ -217,24 +399,36 @@ export default function MapScreen() {
           </View>
         </View>
 
-        {/* Row 2: search bar */}
         <View style={styles.searchRow}>
           <SearchBar
             onFocus={() => setShowSearch(true)}
-            onLocationPress={() => mapRef.current?.animateToRegion(INITIAL_REGION, 800)}
+            onLocationPress={() => injectToMap({ type: 'reset' })}
           />
         </View>
 
-        {/* Row 3: filter chips */}
+        <View style={{ paddingHorizontal: 16 }}>
+          <DemoBadge />
+        </View>
+
         <FilterBar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
       </View>
 
-      {/* Modals / overlays */}
       <SearchModal
         visible={showSearch}
         onClose={() => setShowSearch(false)}
         onSelectStation={(station) => { setSelectedStation(station); setSheetVisible(true); }}
       />
+
+      {stationsError && (
+        <TouchableOpacity
+          style={styles.errorBanner}
+          onPress={fetchStations}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="warning-outline" size={16} color={colors.yellow} />
+          <Text style={styles.errorBannerText}>No se pudieron cargar las estaciones — Reintentar</Text>
+        </TouchableOpacity>
+      )}
 
       <StationBottomSheet
         station={selectedStation}
@@ -243,7 +437,6 @@ export default function MapScreen() {
         userRole={userRole}
       />
 
-      {/* Location FAB — siempre visible */}
       <View style={[styles.locationWrapper, { bottom: sheetVisible ? 220 : 20 }]}>
         <LocationButton onPress={goToMyLocation} />
       </View>
@@ -252,99 +445,3 @@ export default function MapScreen() {
     </View>
   );
 }
-
-const MARKER_FREE     = '#37F26B';
-const MARKER_PAID     = '#19D4FF';
-const MARKER_OCCUPIED = '#FF5A5F';
-
-function CustomMarker({ station }) {
-  let accent;
-  if (!station.available)             accent = MARKER_OCCUPIED;
-  else if (station.pricePerKWh === 0) accent = MARKER_FREE;
-  else                                accent = MARKER_PAID;
-
-  return (
-    <View style={styles.markerWrapper}>
-      <View style={[styles.markerCard, { borderColor: accent, shadowColor: accent }]}>
-        <Text style={[styles.markerCardText, { color: accent }]}>
-          {station.pricePerKWh === 0 ? 'Gratis' : formatCOP(station.pricePerKWh)}
-        </Text>
-      </View>
-      {Platform.OS === 'ios' ? (
-        <View style={[styles.markerDotIOS, { backgroundColor: accent, shadowColor: accent }]} />
-      ) : (
-        <View style={styles.markerDotWrap}>
-          <View style={[styles.markerGlowOuter, { backgroundColor: accent }]} />
-          <View style={[styles.markerGlowMid,  { backgroundColor: accent }]} />
-          <View style={[styles.markerDotCore,  { backgroundColor: accent }]} />
-        </View>
-      )}
-    </View>
-  );
-}
-
-const darkMapStyle = [
-  // ── 1. BASE ──────────────────────────────────────────
-  // geometry #0A1322 solo para bordes/fondo fuera del mapa
-  { elementType: 'geometry',           stylers: [{ color: '#0A1322' }] },
-  { elementType: 'labels',      stylers: [{ visibility: 'off' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0A1322' }] },
-  { elementType: 'labels.text.fill',   stylers: [{ color: '#C8D0DC' }] },
-
-  // ── 2. AGUA ──────────────────────────────────────────
-  { featureType: 'water', elementType: 'geometry',         stylers: [{ color: '#234A8A' }] },
-  { featureType: 'water', elementType: 'labels.text',      stylers: [{ visibility: 'on' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9BA6B7' }] },
-
-  // ── 3. LANDSCAPE — ciudad como color base ───────────
-  // landscape general = color urbano #4A5568 (cubre toda la tierra)
-  { featureType: 'landscape',          elementType: 'geometry', stylers: [{ color: '#4A5568' }] },
-  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#4A5568' }] },
-
-  // Vegetación va DESPUÉS — sobreescribe el #4A5568 general
-  { featureType: 'landscape.natural',           elementType: 'geometry', stylers: [{ color: '#2D7466' }] },
-  { featureType: 'landscape.natural.terrain',   elementType: 'geometry', stylers: [{ color: '#2D7466' }] },
-  { featureType: 'landscape.natural.landcover', elementType: 'geometry', stylers: [{ color: '#2D7466' }] },
-
-  // ── 4. POI ────────────────────────────────────────────
-  { featureType: 'poi',      elementType: 'geometry',         stylers: [{ color: '#4A5568' }] },
-  { featureType: 'poi.park', elementType: 'geometry',         stylers: [{ color: '#245C50' }] },
-  { featureType: 'poi',      elementType: 'labels.text',      stylers: [{ visibility: 'on' }] },
-  { featureType: 'poi',      elementType: 'labels.text.fill', stylers: [{ color: '#9BA6B7' }] },
-  { featureType: 'poi',      elementType: 'labels.icon',      stylers: [{ visibility: 'on' }] },
-
-  // ── 5. TRANSIT ────────────────────────────────────────
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#0A1322' }] },
-
-  // ── 6. CALLES SECUNDARIAS ─────────────────────────────
-  { featureType: 'road',       elementType: 'geometry.fill',   stylers: [{ color: '#5B6678' }] }, // Calles secundarias
-  { featureType: 'road',       elementType: 'geometry.stroke', stylers: [{ color: '#3A4558' }] },
-  { featureType: 'road.local', elementType: 'geometry.fill',   stylers: [{ color: '#5B6678' }] },
-  { featureType: 'road.local', elementType: 'geometry.stroke', stylers: [{ color: '#3A4558' }] },
-  { featureType: 'road.local', elementType: 'labels.text',     stylers: [{ visibility: 'off' }] },
-
-  // ── 7. CALLES PRINCIPALES ─────────────────────────────
-  { featureType: 'road.arterial', elementType: 'geometry.fill',      stylers: [{ color: '#8B96A7' }] }, // Calles principales
-  { featureType: 'road.arterial', elementType: 'geometry.stroke',    stylers: [{ color: '#4A5568' }] },
-  { featureType: 'road.arterial', elementType: 'labels.text',        stylers: [{ visibility: 'on' }] },
-  { featureType: 'road.arterial', elementType: 'labels.text.fill',   stylers: [{ color: '#9BA6B7' }] }, // Texto secundario
-  { featureType: 'road.arterial', elementType: 'labels.text.stroke', stylers: [{ color: '#0A1322' }] },
-
-  // ── 8. AUTOPISTAS ─────────────────────────────────────
-  { featureType: 'road.highway',                   elementType: 'geometry.fill',        stylers: [{ color: '#A4AEBE' }] }, // Autopistas
-  { featureType: 'road.highway',                   elementType: 'geometry.stroke',      stylers: [{ color: '#5B6678' }] },
-  { featureType: 'road.highway',                   elementType: 'labels.text',          stylers: [{ visibility: 'on' }] },
-  { featureType: 'road.highway',                   elementType: 'labels.text.fill',     stylers: [{ color: '#C8D0DC' }] }, // Texto primario
-  { featureType: 'road.highway',                   elementType: 'labels.text.stroke',   stylers: [{ color: '#0A1322' }] },
-  { featureType: 'road.highway.controlled_access', elementType: 'geometry.fill',        stylers: [{ color: '#A4AEBE' }] },
-  { featureType: 'road.highway.controlled_access', elementType: 'geometry.stroke',      stylers: [{ color: '#5B6678' }] },
-
-  // ── 9. ADMINISTRATIVO ─────────────────────────────────
-  { featureType: 'administrative',              elementType: 'geometry.stroke',     stylers: [{ color: '#2A3A50' }, { weight: 0.5 }] },
-  { featureType: 'administrative.locality',     elementType: 'labels.text',         stylers: [{ visibility: 'on' }] },
-  { featureType: 'administrative.locality',     elementType: 'labels.text.fill',    stylers: [{ color: '#C8D0DC' }] }, // Texto primario
-  { featureType: 'administrative.locality',     elementType: 'labels.text.stroke',  stylers: [{ color: '#0A1322' }] },
-  { featureType: 'administrative.neighborhood', elementType: 'labels.text',         stylers: [{ visibility: 'on' }] },
-  { featureType: 'administrative.neighborhood', elementType: 'labels.text.fill',    stylers: [{ color: '#9BA6B7' }] }, // Texto secundario
-  { featureType: 'administrative.neighborhood', elementType: 'labels.text.stroke',  stylers: [{ color: '#0A1322' }] },
-];

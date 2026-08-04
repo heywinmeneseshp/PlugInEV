@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { colors, weights, radius } from '../styles/theme';
 import { obtenerReservasPendientes } from '../services/api/anfitrion';
+import { useAuth } from '../context/AuthContext';
+import DemoBadge from '../components/DemoBadge';
 
 const { width } = Dimensions.get('window');
 
@@ -31,22 +33,24 @@ function mapReservation(r) {
 const STATUS = {
   pending:   { label: 'Pendiente',  color: '#FFD60A', bg: 'rgba(255,214,10,0.12)'  },
   confirmed: { label: 'Confirmada', color: colors.cyan, bg: 'rgba(0,186,255,0.12)' },
+  active:    { label: 'En carga',   color: colors.cyan, bg: 'rgba(0,186,255,0.12)' },
   completed: { label: 'Completada', color: colors.green, bg: 'rgba(0,255,140,0.12)'},
 };
 
 export default function HostReservationsScreen() {
   const insets     = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    obtenerReservasPendientes()
+    obtenerReservasPendientes(user?.email)
       .then(data => setReservations(Array.isArray(data) ? data.map(mapReservation) : []))
       .catch(() => setReservations([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   const filtered = filter === 'all'
     ? reservations
@@ -64,6 +68,7 @@ export default function HostReservationsScreen() {
       {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>Reservas</Text>
+        <DemoBadge />
         {pendingCount > 0 && (
           <LinearGradient colors={['#00BAFF','#00FF8C']} style={s.badge}>
             <Text style={s.badgeText}>{pendingCount}</Text>

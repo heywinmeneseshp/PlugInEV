@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GradientButton from '../components/GradientButton';
 import { obtenerEstadisticas } from '../services/api/anfitrion';
+import { useAuth } from '../context/AuthContext';
+import DemoBadge from '../components/DemoBadge';
 import { colors, weights, radius } from '../styles/theme';
 
 const BANKS = [
@@ -22,6 +24,7 @@ const ACCOUNT_TYPES = ['Ahorros', 'Corriente'];
 
 export default function HostAccountScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
 
   const [bank, setBank]           = useState('nequi');
   const [accountType, setAccountType] = useState('Ahorros');
@@ -36,7 +39,7 @@ export default function HostAccountScreen() {
   });
 
   useEffect(() => {
-    obtenerEstadisticas()
+    obtenerEstadisticas(user?.email)
       .then(data => {
         if (data) setStats({
           totalEarned: data.total_earned || 0,
@@ -46,7 +49,7 @@ export default function HostAccountScreen() {
         });
       })
       .catch(() => {});
-  }, []);
+  }, [user]);
 
   const handleSave = () => {
     if (!accountNum.trim() || !accountName.trim()) {
@@ -66,6 +69,7 @@ export default function HostAccountScreen() {
     >
       <View style={s.header}>
         <Text style={s.headerTitle}>Mi Cuenta</Text>
+        <DemoBadge style={{ marginTop: 6 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
@@ -177,7 +181,7 @@ export default function HostAccountScreen() {
         <View style={s.infoBox}>
           <Ionicons name="shield-checkmark-outline" size={16} color={colors.green} />
           <Text style={s.infoText}>
-            Los pagos se liquidan cada lunes. El sistema de escrow garantiza que solo recibes el pago cuando la sesión se completa exitosamente.
+            Los pagos se liquidan cada lunes. El dinero queda protegido y solo lo recibes cuando la sesión se completa exitosamente.
           </Text>
         </View>
 

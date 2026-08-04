@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   ScrollView, StyleSheet, Dimensions, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
+import WebView from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,7 +28,7 @@ const PAGOS      = [
 export default function HostSetupScreen() {
   const insets     = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { setHostStation } = useAuth();
+  const { user, setHostStation } = useAuth();
 
   const [step, setStep]             = useState(0);
   const [name, setName]             = useState('');
@@ -37,22 +38,62 @@ export default function HostSetupScreen() {
   const [connectors, setConnectors] = useState([]);
   const [payment, setPayment]       = useState('');
   const [loading, setLoading]       = useState(false);
+  const [geocoding, setGeocoding]   = useState(false);
   const [coords, setCoords]         = useState({ latitude: 10.995, longitude: -74.80 });
 
-  const geocodeAddress = async (addr) => {
+  const miniMapRef    = useRef(null);
+  const geocodeTimer  = useRef(null);
+
+  const geocodeAddress = useCallback(async (addr) => {
     if (!addr.trim()) return;
+    setGeocoding(true);
     try {
       const query = encodeURIComponent(addr + ', Barranquilla, Colombia');
       const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`;
       const res = await fetch(url, { headers: { 'User-Agent': 'PlugInEV/1.0' } });
       const data = await res.json();
       if (data.length > 0) {
-        setCoords({ latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) });
+        const newCoords = { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+        setCoords(newCoords);
+        const js = `window.handleMsg(${JSON.stringify(JSON.stringify({ type: 'updatePin', lat: newCoords.latitude, lng: newCoords.longitude }))}); true;`;
+        miniMapRef.current?.injectJavaScript(js);
       }
     } catch {
       // keep default coords
+    } finally {
+      setGeocoding(false);
     }
-  };
+  }, []);
+
+  const handleAddressChange = useCallback((text) => {
+    setAddress(text);
+    if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+    if (text.length > 6) {
+      geocodeTimer.current = setTimeout(() => geocodeAddress(text), 700);
+    }
+  }, [geocodeAddress]);
+
+  const reverseGeocode = useCallback(async (lat, lng) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'PlugInEV/1.0' } });
+      const data = await res.json();
+      if (data?.display_name) setAddress(data.display_name);
+    } catch {
+      // si falla, se conservan las coordenadas igual; el usuario puede escribir la dirección a mano
+    }
+  }, []);
+
+  // El usuario tocó el mini-mapa o arrastró el pin para ubicar el punto manualmente
+  const handleMapMessage = useCallback((event) => {
+    try {
+      const msg = JSON.parse(event.nativeEvent.data);
+      if (msg.type === 'pinMoved') {
+        setCoords({ latitude: msg.lat, longitude: msg.lng });
+        reverseGeocode(msg.lat, msg.lng);
+      }
+    } catch {}
+  }, [reverseGeocode]);
 
   const toggleConnector = (c) =>
     setConnectors((p) => p.includes(c) ? p.filter((x) => x !== c) : [...p, c]);
@@ -68,6 +109,7 @@ export default function HostSetupScreen() {
     setLoading(true);
     try {
       const payload = {
+        host_id: user?.email || null,
         name: name.trim(),
         address: address.trim(),
         latitude: coords.latitude,
@@ -176,20 +218,44 @@ export default function HostSetupScreen() {
                 style={s.input}
                 placeholder="Cra. 65 #80-120, Barranquilla"
                 placeholderTextColor={colors.textHint}
-                value={address} onChangeText={setAddress}
+                value={address}
+                onChangeText={handleAddressChange}
               />
             </Field>
 
-            {/* Placeholder mapa */}
-            <View style={s.mapPlaceholder}>
-              <LinearGradient
-                colors={['rgba(0,186,255,0.1)','rgba(0,255,140,0.08)']}
-                style={s.mapInner}
-              >
-                <Ionicons name="map-outline" size={36} color={colors.cyan} />
-                <Text style={s.mapText}>Barranquilla, Colombia</Text>
-                <Text style={s.mapSub}>La ubicación se ajustará en el mapa</Text>
-              </LinearGradient>
+            {/* Mapa con pin de la dirección */}
+            <View style={s.mapContainer}>
+              <WebView
+                ref={miniMapRef}
+                style={s.map}
+                source={{ html: MINI_LEAFLET_HTML }}
+                javaScriptEnabled
+                originWhitelist={['*']}
+                scrollEnabled={false}
+                mixedContentMode="always"
+                onMessage={handleMapMessage}
+              />
+
+              {/* Indicador de geocodificación */}
+              {geocoding && (
+                <View style={s.mapOverlay}>
+                  <ActivityIndicator color={colors.cyan} size="small" />
+                </View>
+              )}
+
+              {/* Pista de interacción */}
+              <View style={s.mapHint}>
+                <Ionicons name="hand-left-outline" size={11} color={colors.textSecondary} />
+                <Text style={s.mapHintText}>Toca o arrastra el pin para ajustar la ubicación</Text>
+              </View>
+
+              {/* Etiqueta de dirección */}
+              <View style={s.mapLabel}>
+                <Ionicons name="location" size={11} color={colors.green} />
+                <Text style={s.mapLabelText} numberOfLines={1}>
+                  {address.trim() || 'Barranquilla, Colombia'}
+                </Text>
+              </View>
             </View>
           </View>
         )}
@@ -257,7 +323,7 @@ export default function HostSetupScreen() {
             <View style={s.infoBox}>
               <Ionicons name="information-circle-outline" size={16} color={colors.cyan} />
               <Text style={s.infoText}>
-                El sistema de escrow retiene el pago hasta confirmar la sesión completa.
+                El pago queda retenido en garantía hasta confirmar la sesión completa.
               </Text>
             </View>
           </View>
@@ -314,6 +380,77 @@ function ChipBtn({ label, active, onPress }) {
   );
 }
 
+const MINI_MAP_STYLE = {
+  version: 8,
+  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+  sources: { ofm: { type: 'vector', url: 'https://tiles.openfreemap.org/planet' } },
+  layers: [
+    { id:'bg',       type:'background', paint:{ 'background-color':'#0F1522' } },
+    { id:'water',    type:'fill', source:'ofm', 'source-layer':'water',    paint:{ 'fill-color':'#1B3D6F' } },
+    { id:'park',     type:'fill', source:'ofm', 'source-layer':'landuse',  filter:['in','class','park','grass','cemetery','nature_reserve'], paint:{ 'fill-color':'#1E4D3A' } },
+    { id:'urban',    type:'fill', source:'ofm', 'source-layer':'landuse',  filter:['in','class','residential','commercial','industrial','retail'], paint:{ 'fill-color':'#181E2A' } },
+    { id:'building', type:'fill', source:'ofm', 'source-layer':'building', paint:{ 'fill-color':'#222836' } },
+    { id:'road-sec', type:'line', source:'ofm', 'source-layer':'transportation', filter:['in','class','secondary','tertiary'], paint:{ 'line-color':'#5A6670', 'line-width':1.5 } },
+    { id:'road-pri', type:'line', source:'ofm', 'source-layer':'transportation', filter:['in','class','primary','trunk','motorway'], paint:{ 'line-color':'#9AA5B1', 'line-width':3 } },
+  ],
+};
+
+const MINI_LEAFLET_HTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"><\/script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box }
+    html,body,#map { width:100%; height:100%; background:#0B0F1A }
+    .maplibregl-ctrl-logo,.maplibregl-ctrl-attrib { display:none!important }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+(function(){
+  var map = new maplibregl.Map({
+    container:'map',
+    style:${JSON.stringify(MINI_MAP_STYLE)},
+    center:[-74.80,10.995],
+    zoom:15,
+    attributionControl:false
+  });
+  var pin = new maplibregl.Marker({ color:'#19D4FF', draggable:true }).setLngLat([-74.80,10.995]).addTo(map);
+
+  function reportPin(lng,lat){
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type:'pinMoved', lat:lat, lng:lng }));
+  }
+
+  pin.on('dragend', function(){
+    var p = pin.getLngLat();
+    reportPin(p.lng, p.lat);
+  });
+
+  map.on('click', function(e){
+    pin.setLngLat(e.lngLat);
+    reportPin(e.lngLat.lng, e.lngLat.lat);
+  });
+
+  window.handleMsg = function(raw){
+    try{
+      var m=JSON.parse(raw);
+      if(m.type==='updatePin'){
+        pin.setLngLat([m.lng,m.lat]);
+        map.flyTo({center:[m.lng,m.lat],zoom:16,duration:500});
+      }
+    }catch(e){}
+  };
+  document.addEventListener('message',function(e){window.handleMsg(e.data);});
+  window.addEventListener('message',function(e){window.handleMsg(e.data);});
+})();
+<\/script>
+</body>
+</html>`;
+
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
@@ -359,18 +496,54 @@ const s = StyleSheet.create({
     fontSize: 15, color: colors.textPrimary,
   },
 
-  /* Map placeholder */
-  mapPlaceholder: {
+  /* Mapa real */
+  mapContainer: {
+    height: 180,
     borderRadius: radius['2xl'],
     overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(0,186,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,186,255,0.3)',
   },
-  mapInner: {
-    alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 36,
+  map: { ...StyleSheet.absoluteFillObject },
+  mapOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,10,21,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  mapText: { fontSize: 15, fontWeight: weights.semibold, color: colors.textPrimary },
-  mapSub:  { fontSize: 12, color: colors.textMuted },
+  mapHint: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(5,10,21,0.72)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  mapHintText: { flex: 1, fontSize: 10, color: colors.textSecondary },
+  mapLabel: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(5,10,21,0.82)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  mapLabelText: { flex: 1, fontSize: 11, color: colors.textSecondary },
+  miniPin: {
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: colors.cyan,
+    borderWidth: 2.5, borderColor: '#fff',
+  },
 
   /* Chips */
   chipGroupLabel: {

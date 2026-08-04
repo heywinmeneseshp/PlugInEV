@@ -1,14 +1,27 @@
 import { api, endPoints } from './index';
+import { guardarPerfil } from '../local/perfil';
 
 export const iniciarSesion = async (email, password, mode = null) => {
   const body = { email, password };
   if (mode) body.mode = mode;
   const response = await api.post(endPoints.auth.login, body);
+  // Guarda email y modo en perfil local para que obtenerPerfil() funcione
+  await guardarPerfil({ email, active_mode: response.data.active_mode }).catch(() => {});
   return response.data;
 };
 
 export const registrar = async (data) => {
   const response = await api.post(endPoints.auth.register, data);
+  // Persiste los datos de registro en SQLite para el perfil local
+  await guardarPerfil({
+    email: data.email,
+    name: data.name,
+    phone_country_code: data.phone_country_code,
+    phone_number: data.phone_number,
+    profile_type: data.profile_type,
+    active_mode: response.data.active_mode,
+    roles: [response.data.active_mode === 'host' ? 'host' : 'driver'],
+  }).catch(() => {});
   return response.data;
 };
 

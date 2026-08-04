@@ -46,12 +46,13 @@ export default function WalletScreen() {
 
   const handleConfirmRecharge = () => {
     if (!selectedAmount) return;
-    const newBalance = balance + selectedAmount;
-    setBalance(newBalance);
-    updateWallet(newBalance);
     setShowRecharge(false);
     setAmount(null);
-    Alert.alert('Recarga exitosa', `Se han agregado ${formatCOP(selectedAmount)} a tu cartera.`);
+    Alert.alert(
+      'Próximamente',
+      'Las recargas reales estarán disponibles en la próxima versión. Por ahora el saldo se actualiza solo en la app.',
+      [{ text: 'Entendido' }],
+    );
   };
 
   return (
@@ -70,7 +71,7 @@ export default function WalletScreen() {
             </View>
             <View style={s.escrowPill}>
               <Ionicons name="shield-checkmark-outline" size={12} color={colors.green} />
-              <Text style={s.escrowText}>Escrow protegido</Text>
+              <Text style={s.escrowText}>Pago protegido</Text>
             </View>
           </View>
           <Text style={s.balanceLabel}>Saldo disponible</Text>

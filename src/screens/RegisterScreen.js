@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,10 +14,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { listarMarcasVehiculos, listarConectores } from '../services/api/catalogos';
 import GradientButton from '../components/GradientButton';
 import { colors, fonts, weights, radius } from '../styles/theme';
-
-const CONNECTOR_TYPES = ['CCS', 'CHAdeMO', 'Type 2', 'GB/T'];
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -29,10 +28,23 @@ export default function RegisterScreen() {
   const [correo, setCorreo] = useState('');
   const [celular, setCelular] = useState('');
   const [modeloCarro, setModeloCarro] = useState('');
-  const [connector, setConnector] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [marcas, setMarcas] = useState([]);
+  const [conectores, setConectores] = useState([]);
+  const [brandId, setBrandId] = useState(null);
+  const [connectorId, setConnectorId] = useState(null);
+
+  useEffect(() => {
+    listarMarcasVehiculos().then(setMarcas).catch(() => {});
+    listarConectores().then(setConectores).catch(() => {});
+  }, []);
+
+  // La API aún no tiene catálogo sembrado (arrays vacíos) — sección
+  // de vehículo se oculta hasta que haya opciones reales que elegir
+  const hasVehicleCatalog = marcas.length > 0 && conectores.length > 0;
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -43,7 +55,7 @@ export default function RegisterScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!nombre || !apellido || !correo || !celular || !modeloCarro || !connector || !password || !confirmPassword) {
+    if (!nombre || !apellido || !correo || !celular || !password || !confirmPassword) {
       Alert.alert('Campos requeridos', 'Completa todos los campos');
       return;
     }
@@ -69,15 +81,16 @@ export default function RegisterScreen() {
         profile_type: 'natural_person',
         phone_country_code: phone.code,
         phone_number: phone.number,
-        vehicle: {
-          brand_id: null,
-          model: modeloCarro,
-          connector_id: null,
-        },
+        // Solo se envía "vehicle" cuando el usuario eligió marca y conector
+        // reales del catálogo — la API exige UUID válidos, no texto libre
+        ...(brandId && connectorId ? {
+          vehicle: { brand_id: brandId, model: modeloCarro, connector_id: connectorId },
+        } : {}),
       };
       await register(payload);
       navigation.navigate('OTP', { email: correo });
-    } catch {
+    } catch (err) {
+      Alert.alert('No se pudo crear la cuenta', err.message || 'Intenta de nuevo');
     } finally {
       setLoading(false);
     }
@@ -107,7 +120,6 @@ export default function RegisterScreen() {
           { label: 'Apellido', value: apellido, setter: setApellido, placeholder: 'Apellido', capitalize: 'words' },
           { label: 'Correo', value: correo, setter: setCorreo, placeholder: 'tu@correo.com', keyboard: 'email-address', capitalize: 'none' },
           { label: 'Celular', value: celular, setter: setCelular, placeholder: '+57 300 000 0000', keyboard: 'phone-pad' },
-          { label: 'Modelo de carro', value: modeloCarro, setter: setModeloCarro, placeholder: 'Ej: Tesla Model 3', capitalize: 'words' },
         ].map(({ label, value, setter, placeholder, keyboard, capitalize }) => (
           <View key={label} style={styles.inputGroup}>
             <Text style={styles.inputLabel}>{label}</Text>
@@ -124,20 +136,52 @@ export default function RegisterScreen() {
           </View>
         ))}
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Tipo de conector</Text>
-          <View style={styles.chipRow}>
-            {CONNECTOR_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[styles.chip, connector === type && styles.chipActive]}
-                onPress={() => setConnector(type)}
-              >
-                <Text style={[styles.chipText, connector === type && styles.chipTextActive]}>{type}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        {hasVehicleCatalog && (
+          <>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Modelo de carro (opcional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Ej: Model 3"
+                placeholderTextColor={colors.textHint}
+                value={modeloCarro}
+                onChangeText={setModeloCarro}
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Marca del vehículo</Text>
+              <View style={styles.chipRow}>
+                {marcas.map((m) => (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={[styles.chip, brandId === m.id && styles.chipActive]}
+                    onPress={() => setBrandId(brandId === m.id ? null : m.id)}
+                  >
+                    <Text style={[styles.chipText, brandId === m.id && styles.chipTextActive]}>{m.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Tipo de conector</Text>
+              <View style={styles.chipRow}>
+                {conectores.map((c) => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.chip, connectorId === c.id && styles.chipActive]}
+                    onPress={() => setConnectorId(connectorId === c.id ? null : c.id)}
+                  >
+                    <Text style={[styles.chipText, connectorId === c.id && styles.chipTextActive]}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
 
         {[
           { label: 'Contraseña', value: password, setter: setPassword, placeholder: 'Mínimo 8 caracteres' },

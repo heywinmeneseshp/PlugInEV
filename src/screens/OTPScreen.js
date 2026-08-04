@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GradientButton from '../components/GradientButton';
 import { colors, fonts, weights, radius } from '../styles/theme';
 
-const OTP_LENGTH = 8;
+const OTP_LENGTH = 6;
 const RESEND_DELAY = 60;
 
 export default function OTPScreen() {
@@ -60,7 +61,10 @@ export default function OTPScreen() {
   const handleResend = async () => {
     try {
       await reenviarOTP(email, 'email_verification');
-    } catch {}
+      Alert.alert('Código reenviado', 'Revisa tu correo (incluida la carpeta de spam).');
+    } catch (err) {
+      Alert.alert('No se pudo reenviar', err.message || 'Intenta de nuevo');
+    }
     setTimer(RESEND_DELAY);
     setCanResend(false);
     setOtp(Array(OTP_LENGTH).fill(''));
@@ -74,7 +78,8 @@ export default function OTPScreen() {
     try {
       await verifyOTP(email, code);
       navigation.navigate('RolSelection');
-    } catch {
+    } catch (err) {
+      Alert.alert('Código incorrecto', err.message || 'Verifica el código e intenta de nuevo');
     } finally {
       setLoading(false);
     }
@@ -99,7 +104,7 @@ export default function OTPScreen() {
 
       <View style={styles.body}>
         <Text style={styles.description}>
-          Ingresa el código de 8 dígitos enviado a {displayEmail}
+          Ingresa el código de {OTP_LENGTH} dígitos enviado a {displayEmail}
         </Text>
 
         <View style={styles.otpRow}>

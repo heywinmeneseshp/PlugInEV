@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import HostScreen            from '../screens/HostScreen';
@@ -32,12 +32,22 @@ function TabIcon({ routeName, focused }) {
   );
 }
 
+function getAndroidNavBarHeight() {
+  if (Platform.OS !== 'android') return 0;
+  const screenH = Dimensions.get('screen').height;
+  const windowH = Dimensions.get('window').height;
+  const diff = screenH - windowH;
+  return diff > 10 ? diff : 48;
+}
+
 export default function AnfitrionTabs() {
+  const androidPad = getAndroidNavBarHeight();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarStyle: s.tabBar,
+        sceneContainerStyle: { backgroundColor: colors.bg },
+        tabBarStyle: [s.tabBar, Platform.OS === 'android' && { paddingBottom: androidPad + 6 }],
         tabBarShowLabel: true,
         tabBarLabelStyle: s.tabLabel,
         tabBarActiveTintColor: colors.green,
@@ -57,9 +67,8 @@ const s = StyleSheet.create({
     backgroundColor: '#0A1525',
     borderTopColor: 'rgba(255,255,255,0.07)',
     borderTopWidth: 1,
-    height: 62 + (Platform.OS === 'ios' ? 14 : 0),
-    paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+    paddingTop: 2,
+    paddingBottom: Platform.select({ ios: 8, default: 8 }),
   },
   tabLabel: { fontSize: 10, fontWeight: weights.medium, marginTop: 2, letterSpacing: 0.3 },
   pill: { width: 44, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },

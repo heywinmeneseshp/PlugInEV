@@ -6,7 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import PluginLogo from './PluginLogo';
 import { colors, weights, radius } from '../styles/theme';
@@ -25,10 +25,13 @@ const MENU_ITEMS = [
 export default function Sidebar({ visible, onClose }) {
   const insets    = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout, switchRole, setRole } = useAuth();
   const slideAnim   = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
-  const [hostMode, setHostMode] = React.useState(false);
+
+  // Derivado del rol real en contexto, no estado local
+  const isHost = user?.role === 'anfitrion';
+  const connectorType = user?.driverProfile?.connector_type || user?.driverProfile?.connectorType || null;
 
   useEffect(() => {
     Animated.parallel([
@@ -107,29 +110,42 @@ export default function Sidebar({ visible, onClose }) {
               </LinearGradient>
               <Text style={styles.toggleLabel}>Modo Anfitrión</Text>
               <Switch
-                value={hostMode}
-                onValueChange={(val) => { setHostMode(val); if (val) { onClose(); setTimeout(() => switchRole('anfitrion'), 300); } }}
+                value={isHost}
+                onValueChange={async (val) => {
+                  onClose();
+                  await new Promise(r => setTimeout(r, 300));
+                  const role = val ? 'anfitrion' : 'conductor';
+                  // El backend real puede rechazar el cambio de rol si la
+                  // cuenta no tiene el rol "host" asignado del lado del
+                  // servidor; en ese caso se aplica localmente igual
+                  await switchRole(role).catch(() => setRole(role));
+                  navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Main' }] }));
+                }}
                 trackColor={{ false: colors.trackBg, true: 'rgba(0,186,255,0.4)' }}
-                thumbColor={hostMode ? colors.cyan : colors.textMuted}
+                thumbColor={isHost ? colors.cyan : colors.textMuted}
                 ios_backgroundColor={colors.trackBg}
                 style={{ marginLeft: 'auto' }}
               />
             </View>
           </View>
 
-          {/* Tipo de conector */}
-          <View style={[styles.glassCard, { marginTop: 8 }]}>
-            <View style={styles.toggleRow}>
-              <View style={styles.iconPillDim}>
-                <Ionicons name="flash-outline" size={14} color={colors.cyan} />
+          {/* Tipo de conector — solo para conductores */}
+          {!isHost && (
+            <View style={[styles.glassCard, { marginTop: 8 }]}>
+              <View style={styles.toggleRow}>
+                <View style={styles.iconPillDim}>
+                  <Ionicons name="flash-outline" size={14} color={colors.cyan} />
+                </View>
+                <View>
+                  <Text style={styles.connectorMeta}>Tipo de conector</Text>
+                  <Text style={styles.connectorValue}>
+                    {connectorType || 'No configurado'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
               </View>
-              <View>
-                <Text style={styles.connectorMeta}>Tipo de conector</Text>
-                <Text style={styles.connectorValue}>Tipo 2 — Mennekes</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
             </View>
-          </View>
+          )}
         </View>
 
         {/* ── Menu items ── */}

@@ -6,7 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { obtenerPerfil } from '../services/api/perfil';
 import GradientButton from '../components/GradientButton';
@@ -18,15 +18,16 @@ const LOGO_U = require('../../assets/logo_u.png');
 export default function ProfileScreen() {
   const insets     = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { user, logout, switchRole } = useAuth();
+  const { user, logout, switchRole, setRole } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
     obtenerPerfil()
-      .then(data => setProfile(data))
-      .catch(() => {})
+      .then(data => { setProfile(data); setProfileError(false); })
+      .catch(() => setProfileError(true))
       .finally(() => setLoadingProfile(false));
   }, []);
 
@@ -66,6 +67,8 @@ export default function ProfileScreen() {
 
           {loadingProfile ? (
             <ActivityIndicator color="#00BAFF" style={{ marginBottom: 4 }} />
+          ) : profileError ? (
+            <Text style={s.name}>{user?.name || 'Usuario'}</Text>
           ) : (
             <Text style={s.name}>{displayName}</Text>
           )}
@@ -112,7 +115,17 @@ export default function ProfileScreen() {
             style={{ marginBottom: 28 }}
           />
         ) : (
-          <TouchableOpacity style={s.hostBtn} onPress={() => switchRole('anfitrion')} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={s.hostBtn}
+            onPress={async () => {
+              // El backend real puede rechazar el cambio si la cuenta no
+              // tiene el rol "host" asignado del lado del servidor; mientras
+              // eso se desarrolla, se aplica localmente igual
+              await switchRole('anfitrion').catch(() => setRole('anfitrion'));
+              navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Main' }] }));
+            }}
+            activeOpacity={0.8}
+          >
             <View style={s.hostBtnLeft}>
               <LinearGradient
                 colors={['rgba(0,186,255,0.2)', 'rgba(0,255,140,0.2)']}

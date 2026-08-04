@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { forgotPassword, resetPassword } from '../services/api/auth';
+import { solicitarResetPassword, resetPassword } from '../services/api/auth';
 import GradientButton from '../components/GradientButton';
 import { colors, weights, radius } from '../styles/theme';
 
@@ -21,8 +21,7 @@ export default function ForgotPasswordScreen({ navigation }) {
     if (!email) { Alert.alert('Campo requerido', 'Ingresa tu correo'); return; }
     setLoading(true);
     try {
-      const res = await forgotPassword(email);
-      if (res?.otp) Alert.alert('Código OTP', `Modo debug: ${res.otp}`);
+      await solicitarResetPassword(email);
       Alert.alert('Código enviado', 'Revisa tu bandeja de entrada');
       setStep('reset');
     } catch (err) {

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Dimensions,
+  View, Text, TouchableOpacity, StyleSheet, Dimensions, Alert, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { iniciarCarga } from '../services/api/reservas';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -17,9 +18,27 @@ export default function HostMatchScreen() {
   const res        = route.params?.reservation;
 
   const [confirmed, setConfirmed] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
-  const handleConfirm = () => setConfirmed(true);
-  const handleFinish  = () => navigation.navigate('AnfitrionHome', { screen: 'HostReservas' });
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      if (res?.id || res?._id) {
+        await iniciarCarga(res.id || res._id);
+      }
+      setConfirmed(true);
+    } catch (err) {
+      Alert.alert(
+        'Error al confirmar',
+        err.message || 'No se pudo confirmar la llegada. Intenta de nuevo.',
+        [{ text: 'OK' }],
+      );
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleFinish = () => navigation.navigate('AnfitrionHome', { screen: 'HostReservas' });
 
   if (!res) return null;
 
@@ -49,7 +68,7 @@ export default function HostMatchScreen() {
             <Text style={s.successTitle}>¡Match confirmado!</Text>
             <Text style={s.successSub}>
               La sesión de carga ha comenzado.{'\n'}
-              El pago quedará en escrow hasta finalizar.
+              El pago quedará retenido en garantía hasta finalizar.
             </Text>
 
             <View style={s.sessionCard}>
@@ -92,7 +111,7 @@ export default function HostMatchScreen() {
               <DetailRow icon="battery-charging-outline" label="Energía" value={`${res.kwh} kWh`} />
               <View style={s.divider} />
               <View style={s.amountRow}>
-                <Text style={s.amountLabel}>Ingreso en escrow</Text>
+                <Text style={s.amountLabel}>Ingreso retenido</Text>
                 <Text style={s.amountValue}>${res.amount.toLocaleString('es-CO')}</Text>
               </View>
             </View>
@@ -101,15 +120,30 @@ export default function HostMatchScreen() {
             <View style={s.infoBox}>
               <Ionicons name="information-circle-outline" size={18} color={colors.cyan} />
               <Text style={s.infoText}>
-                Cuando el conductor llegue y conecte su vehículo, presiona "Confirmar llegada" para iniciar la sesión y liberar el escrow.
+                Cuando el conductor llegue y conecte su vehículo, presiona "Confirmar llegada" para iniciar la sesión y liberar el pago retenido.
               </Text>
             </View>
 
             {/* CTA */}
-            <TouchableOpacity onPress={handleConfirm} activeOpacity={0.85} style={s.confirmWrap}>
-              <LinearGradient colors={['#00BAFF','#00FF8C']} start={{x:0,y:0}} end={{x:1,y:0}} style={s.confirmBtn}>
-                <Ionicons name="flash" size={22} color="#050A15" />
-                <Text style={s.confirmText}>Confirmar llegada</Text>
+            <TouchableOpacity
+              onPress={handleConfirm}
+              activeOpacity={0.85}
+              style={s.confirmWrap}
+              disabled={confirming}
+            >
+              <LinearGradient
+                colors={confirming ? ['rgba(0,186,255,0.5)', 'rgba(0,255,140,0.5)'] : ['#00BAFF','#00FF8C']}
+                start={{x:0,y:0}} end={{x:1,y:0}}
+                style={s.confirmBtn}
+              >
+                {confirming ? (
+                  <ActivityIndicator color="#050A15" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="flash" size={22} color="#050A15" />
+                    <Text style={s.confirmText}>Confirmar llegada</Text>
+                  </>
+                )}
               </LinearGradient>
             </TouchableOpacity>
 

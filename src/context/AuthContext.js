@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useReducer, useCallback, useRef, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { iniciarSesion, registrar, verificarEmail, switchMode as switchModeApi } from '../services/api/auth';
-import { setToken } from '../services/api';
+import { setToken, setUnauthorizedCallback } from '../services/api';
 import { obtenerPerfil } from '../services/api/perfil';
+import { buscarEstacionesPorHost } from '../services/api/estaciones';
 
 const TOKEN_KEY = 'pluginev_auth_token';
 
@@ -63,6 +64,22 @@ export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
   const registerTokenRef = useRef(null);
 
+  // Recupera la estación local del anfitrión (SQLite) para que sobreviva
+  // reinicios de la app, ya que hoy solo vive en memoria (SET_HOST_STATION)
+  const loadHostStation = useCallback(async (hostId) => {
+    if (!hostId) return;
+    try {
+      const stations = await buscarEstacionesPorHost(hostId);
+      if (stations.length > 0) {
+        const s = stations[0];
+        dispatch({
+          type: 'SET_HOST_STATION',
+          payload: { ...s, pricePerKWh: s.price_per_kwh, available: s.online },
+        });
+      }
+    } catch (_) {}
+  }, []);
+
   // Restaurar sesión al abrir la app
   useEffect(() => {
     (async () => {
@@ -88,12 +105,21 @@ export function AuthProvider({ children }) {
                 },
               },
             });
+            loadHostStation(perfil.email);
             return;
           }
         }
       } catch (_) {}
       dispatch({ type: 'SET_READY' });
     })();
+  }, [loadHostStation]);
+
+  // Wire the 401 interceptor so expired-token responses auto-logout
+  const logoutRef = useRef(null);
+  useEffect(() => {
+    setUnauthorizedCallback(() => {
+      if (logoutRef.current) logoutRef.current();
+    });
   }, []);
 
   const login = useCallback(async (email, password) => {
@@ -121,18 +147,33 @@ export function AuthProvider({ children }) {
           }});
         }
       }).catch(() => {});
+      loadHostStation(email);
     } catch (err) {
       dispatch({ type: 'LOGIN_FAILURE' });
       throw err;
     }
-  }, []);
+  }, [loadHostStation]);
 
   const register = useCallback(async (formData) => {
     dispatch({ type: 'START' });
     try {
       const data = await registrar(formData);
       setToken(data.access_token);
+      await SecureStore.setItemAsync(TOKEN_KEY, data.access_token);
       registerTokenRef.current = { token: data.access_token, refreshToken: data.refresh_token };
+      // Datos optimistas mientras se completa la verificación por OTP;
+      // verifyOTP los sobrescribe con la respuesta autoritativa del servidor
+      dispatch({
+        type: 'SET_USER',
+        payload: {
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone_number,
+          role: 'conductor',
+          activeMode: 'driver',
+          email_verified: false,
+        },
+      });
       dispatch({ type: 'REGISTER_SUCCESS' });
       return data;
     } catch (err) {
@@ -151,12 +192,14 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
-  const finishRegistration = useCallback(() => {
+  const finishRegistration = useCallback((roleOverride) => {
     const tk = registerTokenRef.current;
     dispatch({
       type: 'LOGIN_SUCCESS',
       payload: {
-        user: state.user,
+        // roleOverride evita depender de state.user desactualizado justo
+        // después de un dispatch de setRole/switchRole en el mismo tick
+        user: roleOverride ? { ...state.user, role: roleOverride } : state.user,
         token: tk?.token || null,
       },
     });
@@ -189,6 +232,9 @@ export function AuthProvider({ children }) {
     await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
     dispatch({ type: 'LOGOUT' });
   }, []);
+
+  // Keep logoutRef in sync so the interceptor always calls the latest version
+  useEffect(() => { logoutRef.current = logout; }, [logout]);
 
   const value = {
     ...state,

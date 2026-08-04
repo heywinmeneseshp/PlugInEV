@@ -38,7 +38,7 @@ const SLIDES = [
     id: '3',
     icon: 'wallet-outline',
     title: 'Paga fácil,\ncarga más',
-    subtitle: 'Wallet integrado con escrow\ny recibo digital al instante.',
+    subtitle: 'Wallet con pago protegido\ny recibo digital al instante.',
     gradientColors: ['rgba(0,255,140,0.18)', 'rgba(0,255,140,0.04)'],
     iconColor: colors.green,
   },

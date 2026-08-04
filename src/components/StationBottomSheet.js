@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import GradientButton from './GradientButton';
@@ -13,26 +13,43 @@ export default function StationBottomSheet({
   userRole = 'conductor',
 }) {
   const navigation = useNavigation();
-  if (!station || !visible) return null;
+  const slideAnim = useRef(new Animated.Value(220)).current;
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: visible ? 0 : 220,
+      useNativeDriver: true,
+      tension: 70,
+      friction: 12,
+    }).start();
+  }, [visible, slideAnim]);
+
+  if (!station && !visible) return null;
 
   const handleViewDetail = () => {
     navigation.navigate('StationDetail', { station });
   };
 
-  const isFree = station.pricePerKWh === 0;
-  const markerColor = !station.available
+  const isFree = station?.pricePerKWh === 0;
+  const markerColor = !station?.available
     ? colors.red
     : isFree
     ? colors.green
     : colors.cyan;
 
   return (
-    <View style={styles.container}>
+    <Animated.View
+      style={[styles.container, { transform: [{ translateY: slideAnim }] }]}
+      pointerEvents={visible ? 'auto' : 'none'}
+    >
       <View style={styles.card}>
+        {/* Handle */}
+        <View style={styles.handle} />
+
         <View style={styles.row}>
           <View style={styles.info}>
             <View style={styles.nameRow}>
-              <Text style={styles.name} numberOfLines={1}>{station.name}</Text>
+              <Text style={styles.name} numberOfLines={1}>{station?.name}</Text>
               {isFree && (
                 <View style={styles.freeBadge}>
                   <Text style={styles.freeText}>Gratis</Text>
@@ -40,30 +57,40 @@ export default function StationBottomSheet({
               )}
             </View>
 
-            <Text style={styles.address} numberOfLines={1}>{station.address}</Text>
+            <Text style={styles.address} numberOfLines={1}>{station?.address}</Text>
 
             <View style={styles.tagsRow}>
               <View style={[styles.dot, { backgroundColor: markerColor }]} />
               <Text style={styles.tag}>
-                {station.available ? 'Disponible' : 'Ocupado'}
+                {station?.available ? 'Disponible' : 'Ocupado'}
               </Text>
               <View style={styles.sep} />
               <Text style={styles.tag}>
-                {station.pricePerKWh === 0 ? 'Gratis' : `${formatCOP(station.pricePerKWh)}/kWh`}
+                {station?.pricePerKWh === 0 ? 'Gratis' : `${formatCOP(station?.pricePerKWh ?? 0)}/kWh`}
               </Text>
-              <View style={styles.sep} />
-              <Text style={styles.tag}>{station.power}</Text>
-              <View style={styles.sep} />
-              <Text style={styles.tag}>{'\u2605'} {station.rating}</Text>
+              {station?.power ? (
+                <>
+                  <View style={styles.sep} />
+                  <Text style={styles.tag}>{station.power}</Text>
+                </>
+              ) : null}
+              {station?.rating ? (
+                <>
+                  <View style={styles.sep} />
+                  <Text style={styles.tag}>{'★'} {station.rating}</Text>
+                </>
+              ) : null}
             </View>
 
-            <View style={styles.connectorRow}>
-              {station.connectors.map((c, i) => (
-                <View key={i} style={styles.connectorChip}>
-                  <Text style={styles.connectorText}>{c}</Text>
-                </View>
-              ))}
-            </View>
+            {station?.connectors?.length > 0 && (
+              <View style={styles.connectorRow}>
+                {station.connectors.map((c, i) => (
+                  <View key={i} style={styles.connectorChip}>
+                    <Text style={styles.connectorText}>{c}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
 
           {userRole === 'conductor' && (
@@ -81,14 +108,21 @@ export default function StationBottomSheet({
           <TouchableOpacity
             onPress={() => onReserve && onReserve(station)}
             activeOpacity={0.8}
-            style={styles.reserveInteligenteBtn}
+            style={[styles.reserveBtn, !station?.available && styles.reserveBtnDisabled]}
+            disabled={!station?.available}
           >
-            <Ionicons name="flash-outline" size={15} color={colors.cyan} />
-            <Text style={styles.reserveInteligenteBtnText}>Reserva inteligente</Text>
+            <Ionicons
+              name="flash-outline"
+              size={15}
+              color={station?.available ? colors.cyan : colors.textMuted}
+            />
+            <Text style={[styles.reserveBtnText, !station?.available && styles.reserveBtnTextDisabled]}>
+              {station?.available ? 'Reserva inteligente' : 'Estación ocupada'}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -99,22 +133,32 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 20,
-    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
-    paddingHorizontal: 16,
+    paddingBottom: Platform.OS === 'ios' ? 0 : 0,
   },
   card: {
     backgroundColor: '#0A1525',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    padding: 20,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.08)',
     borderBottomWidth: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -8 },
     shadowOpacity: 0.4,
     shadowRadius: 24,
     elevation: 20,
+    gap: 12,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'center',
+    marginBottom: 4,
   },
   row: {
     flexDirection: 'row',
@@ -140,6 +184,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,255,140,0.3)',
   },
   freeText: {
     fontSize: fonts.base,
@@ -156,6 +202,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     marginTop: 8,
+    gap: 4,
   },
   dot: {
     width: 8,
@@ -172,7 +219,7 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 1.5,
     backgroundColor: colors.textMuted,
-    marginHorizontal: 6,
+    marginHorizontal: 4,
   },
   connectorRow: {
     flexDirection: 'row',
@@ -184,6 +231,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   connectorText: {
     fontSize: fonts.xs,
@@ -191,44 +240,26 @@ const styles = StyleSheet.create({
     fontWeight: weights.medium,
   },
   reserveBtn: {
-    backgroundColor: colors.green,
-    borderRadius: 18,
-    height: 52,
-    paddingHorizontal: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 110,
-    shadowColor: colors.green,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  reserveBtnDisabled: {
-    backgroundColor: colors.disabled,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  reserveText: {
-    fontSize: fonts['2xl'],
-    fontWeight: weights.bold,
-    color: colors.bg,
-  },
-  reserveInteligenteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 10,
-    paddingVertical: 10,
-    borderRadius: 14,
+    paddingVertical: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(0,186,255,0.4)',
-    backgroundColor: 'rgba(0,186,255,0.06)',
+    backgroundColor: 'rgba(0,186,255,0.07)',
   },
-  reserveInteligenteBtnText: {
+  reserveBtnDisabled: {
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  reserveBtnText: {
     fontSize: fonts.md,
     fontWeight: weights.semibold,
     color: colors.cyan,
+  },
+  reserveBtnTextDisabled: {
+    color: colors.textMuted,
   },
 });

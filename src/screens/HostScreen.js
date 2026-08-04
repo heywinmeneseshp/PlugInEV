@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, Switch,
-  TouchableOpacity, StyleSheet, Dimensions,
+  TouchableOpacity, StyleSheet, Dimensions, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { toggleOnline as toggleOnlineAPI, obtenerDashboard } from '../services/api/anfitrion';
 import { formatCOP } from '../utils/format';
 import GradientButton from '../components/GradientButton';
+import DemoBadge from '../components/DemoBadge';
 import { colors, weights, radius } from '../styles/theme';
 
 const { width } = Dimensions.get('window');
@@ -28,10 +29,12 @@ export default function HostScreen() {
     earningsToday: 0, earningsWeek: 0,
     kwhToday: 0, kwhWeek: 0,
   });
+  const [statsError, setStatsError] = useState(false);
 
-  useEffect(() => {
+  const fetchDashboard = useCallback(() => {
     if (!station) return;
-    obtenerDashboard()
+    setStatsError(false);
+    obtenerDashboard(user?.email)
       .then(data => {
         if (data) {
           const p = station.pricePerKWh || 800;
@@ -45,8 +48,10 @@ export default function HostScreen() {
           });
         }
       })
-      .catch(() => {});
-  }, [station]);
+      .catch(() => setStatsError(true));
+  }, [station, user]);
+
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 
   const handleToggleOnline = async (value) => {
     setOnline(value);
@@ -98,7 +103,10 @@ export default function HostScreen() {
         <TouchableOpacity onPress={() => switchRole('conductor')} style={s.headerBtn}>
           <Ionicons name="arrow-back-outline" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Dashboard</Text>
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <Text style={s.headerTitle}>Dashboard</Text>
+          <DemoBadge />
+        </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity style={s.addBtn} onPress={() => navigation.navigate('HostSetup')}>
             <Ionicons name="add-outline" size={20} color={colors.cyan} />
@@ -110,6 +118,17 @@ export default function HostScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {statsError && (
+        <TouchableOpacity
+          style={s.errorBanner}
+          onPress={fetchDashboard}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="warning-outline" size={15} color="#FFD60A" />
+          <Text style={s.errorBannerText}>No se pudo cargar el dashboard — Reintentar</Text>
+        </TouchableOpacity>
+      )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
@@ -384,6 +403,16 @@ const s = StyleSheet.create({
     fontSize: 11, color: colors.textMuted, textAlign: 'center',
     lineHeight: 16, marginBottom: 8,
   },
+
+  /* Error banner */
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 20, marginBottom: 8,
+    backgroundColor: 'rgba(13,22,38,0.97)',
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: 'rgba(255,214,10,0.4)',
+  },
+  errorBannerText: { flex: 1, fontSize: 12, color: '#FFD60A', fontWeight: '600' },
 
   /* Empty state */
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },

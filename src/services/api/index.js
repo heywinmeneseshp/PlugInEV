@@ -7,10 +7,24 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Callback wired from AuthContext so the interceptor can call logout without a circular import
+let _onUnauthorized = null;
+export function setUnauthorizedCallback(fn) {
+  _onUnauthorized = fn;
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const msg = error.response?.data?.detail?.[0]?.msg || error.response?.data?.message || error.message || 'Error de conexión';
+    if (error.response?.status === 401 && _onUnauthorized) {
+      _onUnauthorized();
+    }
+    const detail = error.response?.data?.detail;
+    const msg =
+      (typeof detail === 'string' ? detail : detail?.[0]?.msg) ||
+      error.response?.data?.message ||
+      error.message ||
+      'Error de conexión';
     return Promise.reject(new Error(msg));
   }
 );
@@ -53,6 +67,7 @@ const endPoints = {
     detenerCarga: (id) => `/v1/reservas/${id}/detener`,
     telemetria: (id) => `/v1/reservas/${id}/telemetria`,
     cdr: '/v1/reservas/cdr',
+    calificar: (id) => `/v1/reservas/${id}/rating`,
   },
   anfitrion: {
     registrarEstacion: '/v1/anfitrion/estaciones',
